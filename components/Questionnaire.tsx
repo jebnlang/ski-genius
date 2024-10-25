@@ -56,7 +56,7 @@ export default function Questionnaire() {
     setStep(step - 1)
   }
 
-  const handleAnswer = (question: keyof Answers, answer: any) => {
+  const handleAnswer = (question: keyof Answers, answer: string | string[] | { type: string; dates: DateRange | undefined; month: string; season: string }) => {
     setAnswers((prevAnswers) => ({ ...prevAnswers, [question]: answer }))
   }
 
@@ -114,7 +114,7 @@ export default function Questionnaire() {
       case 2:
         return (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold">What's your skill level on the slopes?</h2>
+            <h2 className="text-2xl font-bold">What&apos;s your skill level on the slopes?</h2>
             <div className="space-y-2">
               {['First timer', 'Beginner', 'Intermediate', 'Advanced', 'Expert'].map((level) => (
                 <div key={level} className="flex items-center space-x-2">
@@ -145,7 +145,7 @@ export default function Questionnaire() {
                   <Checkbox
                     id={preference}
                     checked={answers.resortPreferences.includes(preference)}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={() => {
                       handleMaxThreeSelection('resortPreferences', preference)
                     }}
                     disabled={answers.resortPreferences.length >= 3 && !answers.resortPreferences.includes(preference)}
@@ -166,7 +166,7 @@ export default function Questionnaire() {
                   <Checkbox
                     id={terrain}
                     checked={answers.terrainPreferences.includes(terrain)}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={() => {
                       handleMaxThreeSelection('terrainPreferences', terrain)
                     }}
                     disabled={answers.terrainPreferences.length >= 3 && !answers.terrainPreferences.includes(terrain)}
@@ -216,7 +216,7 @@ export default function Questionnaire() {
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="flexible" id="flexible" />
-                <Label htmlFor="flexible">I'm flexible</Label>
+                <Label htmlFor="flexible">I&apos;m flexible</Label>
               </div>
             </RadioGroup>
             {answers.travelDates.type === 'specific' && (
@@ -303,4 +303,3 @@ export default function Questionnaire() {
     </div>
   )
 }
-
