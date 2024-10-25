@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
 import { DateRange } from 'react-day-picker'
-import Image from 'next/image'
+// import Image from 'next/image'
 
 interface Answers {
   groupComposition: string
