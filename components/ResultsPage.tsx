@@ -6,7 +6,7 @@ import { useCompletion } from 'ai/react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Snowflake, DollarSign, Wifi, Waves, Utensils, Mountain, Trees, Sunrise } from 'lucide-react'
+import { DollarSign, Snowflake } from 'lucide-react'
 
 interface Resort {
   name: string
