@@ -408,7 +408,7 @@ export default function Questionnaire() {
       case 10:
         return (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold">10. What's most important to you in a resort? Pick up to 3 things!</h2>
+            <h2 className="text-2xl font-bold">10. What&apos;s most important to you in a resort? Pick up to 3 things!</h2>
             <div className="space-y-2">
               {['Extensive ski area', 'Less crowded slopes', 'Close to the airport', 'Family-friendly', 'Peaceful atmosphere', 'Scenic beauty', 'Modern lift system', 'Snow sure- High altitude resort'].map((preference) => (
                 <div key={preference} className="flex items-center space-x-2">
@@ -498,7 +498,7 @@ export default function Questionnaire() {
       case 15:
         return (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold">15. Is there anything else you'd like to tell us about your perfect ski trip?</h2>
+            <h2 className="text-2xl font-bold">15. Is there anything else you&apos;d like to tell us about your perfect ski trip?</h2>
             <Textarea
               placeholder="Tell us more..."
               value={answers.additionalInfo}
