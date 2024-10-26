@@ -101,7 +101,7 @@ export default function Questionnaire() {
 
   const handleMaxThreeSelection = (question: 'resortPreferences' | 'slopePreferences', value: string) => {
     setAnswers((prevAnswers) => {
-      const currentSelection = prevAnswers[question] || [];  // Ensure default empty array
+      const currentSelection = prevAnswers[question] || [];
       if (currentSelection.includes(value)) {
         return { ...prevAnswers, [question]: currentSelection.filter((item) => item !== value) }
       } else if (currentSelection.length < 3) {
@@ -394,13 +394,12 @@ export default function Questionnaire() {
       case 9:
         return (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold">9. Do you prefer ski-in/ski-out resorts?</h2>
+            <h2 className="text-2xl font-bold">9. Do you prefer ski-in/ski-out  resorts?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('skiInSkiOut', value)}>
               {['Yes, must have', 'Nice to have', "Don't care"].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <RadioGroupItem value={option} id={option} />
                   <Label htmlFor={option}>{option}</Label>
-                
                 </div>
               ))}
             </RadioGroup>
@@ -408,7 +407,7 @@ export default function Questionnaire() {
         )
       case 10:
         return (
-          <div  className="space-y-4">
+          <div className="space-y-4">
             <h2 className="text-2xl font-bold">10. What's most important to you in a resort? Pick up to 3 things!</h2>
             <div className="space-y-2">
               {['Extensive ski area', 'Less crowded slopes', 'Close to the airport', 'Family-friendly', 'Peaceful atmosphere', 'Scenic beauty', 'Modern lift system', 'Snow sure- High altitude resort'].map((preference) => (
@@ -450,7 +449,7 @@ export default function Questionnaire() {
             <h2 className="text-2xl font-bold">12. Besides skiing, what other activities would you like to try?</h2>
             <div className="space-y-2">
               {['Spa/wellness facilities', 'Great food scene', 'Cross-country skiing', 'Winter hiking', 'Heli Skiing', 'Cat skiing', 'Ski touring', 'Night skiing', 'Sledding/Toboganning'].map((activity) => (
-                <div key={activity} className="flex  items-center space-x-2">
+                <div key={activity} className="flex items-center space-x-2">
                   <Checkbox
                     id={activity}
                     checked={answers.otherActivities.includes(activity)}
@@ -482,7 +481,7 @@ export default function Questionnaire() {
       case 14:
         return (
           <div className="space-y-4">
-            <h2 className="text-2xl  font-bold">14. When do you want to go skiing?</h2>
+            <h2 className="text-2xl font-bold">14. When do you want to go skiing?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('travelTime', value)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="month" id="month" />
