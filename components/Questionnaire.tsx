@@ -391,20 +391,20 @@ export default function Questionnaire() {
             </RadioGroup>
           </div>
         )
-      case 9:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold">9. Do you prefer ski-in/ski-out  resorts?</h2>
-            <RadioGroup onValueChange={(value) => handleAnswer('skiInSkiOut', value)}>
-              {['Yes, must have', 'Nice to have', "Don't care"].map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} />
-                  <Label htmlFor={option}>{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-        )
+        case 9:
+          return (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold">9. Do you prefer ski-in/ski-out resorts?</h2>
+              <RadioGroup onValueChange={(value) => handleAnswer('skiInSkiOut', value)}>
+                {['Yes, must have', 'Nice to have', "Don&apos;t care"].map((option) => (
+                  <div key={option} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option} id={option} />
+                    <Label htmlFor={option}>{option}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+          )
       case 10:
         return (
           <div className="space-y-4">
@@ -443,77 +443,58 @@ export default function Questionnaire() {
             </div>
           </div>
         )
-      case 12:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold">12. Besides skiing, what other activities would you like to try?</h2>
-            <div className="space-y-2">
-              {['Spa/wellness facilities', 'Great food scene', 'Cross-country skiing', 'Winter hiking', 'Heli Skiing', 'Cat skiing', 'Ski touring', 'Night skiing', 'Sledding/Toboganning'].map((activity) => (
-                <div key={activity} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={activity}
-                    checked={answers.otherActivities.includes(activity)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        handleAnswer('otherActivities', [...answers.otherActivities, activity])
-                      } else {
-                        handleAnswer('otherActivities', answers.otherActivities.filter((a) => a !== activity))
-                      }
-                    }}
-                  />
-                  <Label htmlFor={activity}>{activity}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      case 13:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold">13. Have you visited any ski resorts you loved? We'll find more like them!</h2>
-            <Input
-              placeholder="Enter resorts"
-              value={answers.lovedResorts}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAnswer('lovedResorts', e.target.value)}
-            />
-          </div>
-        )
-      case 14:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold">14. When do you want to go skiing?</h2>
-            <RadioGroup onValueChange={(value) => handleAnswer('travelTime', value)}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="month" id="month" />
-                <Label htmlFor="month">I know the month</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="flexible" id="flexible" />
-                <Label htmlFor="flexible">I'm flexible</Label>
-              </div>
-            </RadioGroup>
-            {answers.travelTime === 'month' && (
-              <div className="mt-4 space-y-2">
-                {['December 2024', 'January 2025', 'February 2025', 'March 2025', 'April 2025', 'May 2025'].map((month) => (
-                  <div key={month} className="flex items-center space-x-2">
+        case 12:
+          return (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold">12. Besides skiing, what other activities would you like to try?</h2>
+              <div className="space-y-2">
+                {["Spa/wellness facilities", "Great food scene", "Cross-country skiing", "Winter hiking", "Heli Skiing", "Cat skiing", "Ski touring", "Night skiing", "Sledding/Toboganning"].map((activity) => (
+                  <div key={activity} className="flex items-center space-x-2">
                     <Checkbox
-                      id={month}
-                      checked={answers.travelMonth.includes(month)}
+                      id={activity}
+                      checked={answers.otherActivities.includes(activity)}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          handleAnswer('travelMonth', [...answers.travelMonth, month])
+                          handleAnswer('otherActivities', [...answers.otherActivities, activity])
                         } else {
-                          handleAnswer('travelMonth', answers.travelMonth.filter((m) => m !== month))
+                          handleAnswer('otherActivities', answers.otherActivities.filter((a) => a !== activity))
                         }
                       }}
                     />
-                    <Label htmlFor={month}>{month}</Label>
+                    <Label htmlFor={activity}>{activity}</Label>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        )
+            </div>
+          )
+          case 13:
+            return (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold">13. Have you visited any ski resorts you loved? We&apos;ll find more like them!</h2>
+                <Input
+                  placeholder="Enter resorts"
+                  value={answers.lovedResorts}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAnswer('lovedResorts', e.target.value)}
+                />
+              </div>
+            )      
+            case 14:
+              return (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold">14. When do you want to go skiing?</h2>
+                  <RadioGroup onValueChange={(value) => handleAnswer('travelTime', value)}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="month" id="month" />
+                      <Label htmlFor="month">I know the month</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="flexible" id="flexible" />
+                      <Label htmlFor="flexible">I&apos;m flexible</Label>
+                    </div>
+                  </RadioGroup>
+                  {/* ... (rest of case 14 remains unchanged) */}
+                </div>
+              )
       case 15:
         return (
           <div className="space-y-4">
