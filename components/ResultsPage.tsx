@@ -268,7 +268,7 @@ export default function ResultsPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8">Your Perfect Ski Destinations</h1>
-        <p className="text-center text-muted-foreground mb-12">Based on your preferences, we've found these amazing matches</p>
+        <p className="text-center text-muted-foreground mb-12">Based on your preferences, we&apos;ve found these amazing matches</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {resorts.map((resort, index) => (
             <ResortCard key={index} resort={resort} rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} />
