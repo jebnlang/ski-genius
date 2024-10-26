@@ -440,7 +440,7 @@ export default function Questionnaire() {
       case 10:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">What's most important to you in a resort? Pick up to 3 things!</h2>
+            <h2 className="text-3xl font-bold mb-6 text-white">What&apos;s most important to you in a resort? Pick up to 3 things!</h2>
             <div className="space-y-2">
               {['Extensive ski area', 'Less crowded slopes', 'Close to the airport', 'Family-friendly', 'Peaceful atmosphere', 'Scenic beauty', 'Modern lift system', 'Snow sure- High altitude resort'].map((preference) => (
                 <div key={preference} className="flex items-center space-x-2">
@@ -525,7 +525,7 @@ export default function Questionnaire() {
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="flexible" id="flexible" className="border-cyan-500 text-cyan-500" />
-                <Label htmlFor="flexible" className="text-white hover:text-cyan-400 transition-colors">I'm flexible</Label>
+                <Label htmlFor="flexible" className="text-white hover:text-cyan-400 transition-colors">I&apos;m flexible</Label>
               </div>
             </RadioGroup>
             {answers.travelTime === 'month' && (
@@ -555,7 +555,7 @@ export default function Questionnaire() {
       case 15:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Is there anything else you'd like to tell us about your perfect ski trip?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-white">Is there anything else you&apos;d like to tell us about your perfect ski trip?</h2>
             <Textarea
               placeholder="Tell us more..."
               value={answers.additionalInfo}
