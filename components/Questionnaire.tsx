@@ -505,7 +505,7 @@ export default function Questionnaire() {
       case 13:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Have you visited any ski resorts you loved? We'll find more like them!</h2>
+            <h2 className="text-3xl font-bold mb-6 text-white">Have you visited any ski resorts you loved? We&apos;ll find more like them!</h2>
             <Input
               placeholder="Enter resorts"
               value={answers.lovedResorts}
