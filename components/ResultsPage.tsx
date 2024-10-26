@@ -6,11 +6,12 @@ import { useCompletion } from 'ai/react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Snowflake } from 'lucide-react'
+import { DollarSign, Snowflake, Users, Mountain, Martini, TreePine, MapPin } from 'lucide-react'
 
 interface Resort {
   name: string
   location: string
+  country: string
   matchPercentage: number
   difficulty: {
     beginner: number
@@ -19,10 +20,21 @@ interface Resort {
   }
   snowCondition: string
   priceLevel: number
-  amenities: string[]
-  highlights: string[]
+  suitableFor: string[]
+  skiArea: string
+  liftSystem: string
+  nightlife: string
+  familyFriendly: boolean
+  snowPark: boolean
+  offPiste: boolean
+  skiInSkiOut: boolean
+  nearestAirport: string
+  transferTime: string
+  altitude: string
+  seasonDates: string
   terrainTypes: string[]
   additionalActivities: string[]
+  highlights: string[]
 }
 
 const DifficultyBar = ({ difficulty }: { difficulty: Resort['difficulty'] }) => (
@@ -68,7 +80,9 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
           {resort.matchPercentage}% Match
         </Badge>
       </div>
-      <p className="text-muted-foreground mb-2">{resort.location}</p>
+      <p className="text-muted-foreground mb-2 flex items-center">
+        <MapPin className="w-4 h-4 mr-1" /> {resort.location}, {resort.country}
+      </p>
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="font-semibold">Difficulty</span>
@@ -85,12 +99,68 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
           <span className="font-semibold">Price Level</span>
           <PriceLevel level={resort.priceLevel} />
         </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Suitable For</span>
+          <div className="flex items-center">
+            <Users className="w-4 h-4 mr-1" />
+            <span>{resort.suitableFor.join(', ')}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Ski Area</span>
+          <span>{resort.skiArea}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Lift System</span>
+          <span>{resort.liftSystem}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Nightlife</span>
+          <div className="flex items-center">
+            <Martini className="w-4 h-4 mr-1" />
+            <span>{resort.nightlife}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Family Friendly</span>
+          <span>{resort.familyFriendly ? 'Yes' : 'No'}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Snow Park</span>
+          <span>{resort.snowPark ? 'Yes' : 'No'}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Off-Piste</span>
+          <span>{resort.offPiste ? 'Available' : 'Limited'}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Ski-in/Ski-out</span>
+          <span>{resort.skiInSkiOut ? 'Yes' : 'No'}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Nearest Airport</span>
+          <span>{resort.nearestAirport}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Transfer Time</span>
+          <span>{resort.transferTime}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Altitude</span>
+          <span>{resort.altitude}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Season Dates</span>
+          <span>{resort.seasonDates}</span>
+        </div>
       </div>
       <div className="mt-4">
         <span className="font-semibold">Terrain Types</span>
         <div className="flex flex-wrap gap-2 mt-1">
           {resort.terrainTypes.map((terrain, index) => (
-            <Badge key={index} variant="outline">{terrain}</Badge>
+            <Badge key={index} variant="outline">
+              <TreePine className="w-4 h-4 mr-1" /> {terrain}
+            </Badge>
           ))}
         </div>
       </div>
@@ -98,7 +168,9 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
         <span className="font-semibold">Additional Activities</span>
         <div className="flex flex-wrap gap-2 mt-1">
           {resort.additionalActivities.map((activity, index) => (
-            <Badge key={index} variant="outline">{activity}</Badge>
+            <Badge key={index} variant="outline">
+              <Snowflake className="w-4 h-4 mr-1" /> {activity}
+            </Badge>
           ))}
         </div>
       </div>
@@ -106,7 +178,9 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
         <span className="font-semibold">Highlights</span>
         <ul className="list-disc list-inside mt-1">
           {resort.highlights.map((highlight, index) => (
-            <li key={index} className="text-sm">{highlight}</li>
+            <li key={index} className="text-sm flex items-center">
+              <Mountain className="w-4 h-4 mr-1" /> {highlight}
+            </li>
           ))}
         </ul>
       </div>
@@ -129,24 +203,37 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const prompt = `Based on the user's preferences, suggest 3 ski resorts from Europe only with the following details for each:
+        const prompt = `Based on the user's preferences from the questionnaire, suggest 3 ski resorts from Europe only with the following details for each:
         - name
         - location
+        - country
         - matchPercentage (between 80 and 100)
         - difficulty (object with beginner, intermediate, advanced percentages)
         - snowCondition (Excellent, Very Good, or Good)
         - priceLevel (1-4)
+        - suitableFor (array of group types, e.g., ["Families", "Couples"])
+        - skiArea (e.g., "200km of pistes")
+        - liftSystem (e.g., "Modern, high-speed lifts")
+        - nightlife (Vibrant, Moderate, or Quiet)
+        - familyFriendly (boolean)
+        - snowPark (boolean)
+        - offPiste (boolean)
+        - skiInSkiOut (boolean)
+        - nearestAirport
+        - transferTime
+        - altitude (e.g., "1500m - 3000m")
+        - seasonDates (e.g., "December to April")
         - terrainTypes (array of 2-3 terrain types from the questionnaire)
         - additionalActivities (array of 2-3 activities from the questionnaire)
         - highlights (array of 2-3 short phrases based on resort preferences from the questionnaire)
         
-        Respond with a JSON array of resort objects.`
+        Ensure the results match the user's preferences for group type, skiing level, desired countries, and other specific requirements from the questionnaire. Respond with a JSON array of resort objects.`
         const completion = await complete(prompt)
         const parsedResorts = JSON.parse(completion || '[]')
         setResorts(parsedResorts)
       } catch (error) {
         console.error('Error fetching results:', error)
-        setError('API call failed')
+        setError('Failed to fetch resort recommendations')
       } finally {
         setIsLoading(false)
       }
@@ -181,7 +268,7 @@ export default function ResultsPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-8">Your Perfect Ski Destinations</h1>
-        <p className="text-center text-muted-foreground mb-12">Based on your preferences, we&apos;ve found these amazing matches</p>
+        <p className="text-center text-muted-foreground mb-12">Based on your preferences, we've found these amazing matches</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {resorts.map((resort, index) => (
             <ResortCard key={index} resort={resort} rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} />
