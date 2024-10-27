@@ -390,7 +390,7 @@ export default function ResultsPage() {
     <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 bg-[url('/ski-pattern.svg')] bg-repeat">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-8 text-white">Your Perfect Ski Destinations</h1>
-        <p className="text-center text-gray-400 mb-12">Based on your preferences, we've found these amazing matches</p>
+        <p className="text-center text-gray-400 mb-12">Based on your preferences, we&apos;ve found these amazing matches</p>
         {error && (
           <div className="text-center text-red-500 mb-8">
             <p>{error}</p>
