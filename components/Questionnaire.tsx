@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -76,32 +76,52 @@ export default function Questionnaire() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const totalSteps = 15
-  const [answers, setAnswers] = useState<Answers>({
-    groupType: '',
-    childrenAges: [],
-    skiOrSnowboard: '',
-    countries: ['Anywhere'], // Updated countries initial state
-    skiingLevels: [],
-    lessons: '',
-    nightlife: '',
-    snowPark: '',
-    offPiste: '',
-    skiInSkiOut: '',
-    resortPreferences: [],
-    slopePreferences: [],
-    otherActivities: [],
-    lovedResorts: '',
-    travelTime: '',
-    travelMonth: [],
-    additionalInfo: ''
+  const [answers, setAnswers] = useState<Answers>(() => {
+    // Check if we're in a browser environment
+    if (typeof window !== 'undefined') {
+      // Try to load answers from localStorage
+      const savedAnswers = localStorage.getItem('questionnaireAnswers')
+      if (savedAnswers) {
+        return JSON.parse(savedAnswers)
+      }
+    }
+    // If no saved answers, return the initial state
+    return {
+      groupType: '',
+      childrenAges: [],
+      skiOrSnowboard: '',
+      countries: ['Anywhere'],
+      skiingLevels: [],
+      lessons: '',
+      nightlife: '',
+      snowPark: '',
+      offPiste: '',
+      skiInSkiOut: '',
+      resortPreferences: [],
+      slopePreferences: [],
+      otherActivities: [],
+      lovedResorts: '',
+      travelTime: '',
+      travelMonth: [],
+      additionalInfo: ''
+    }
   })
+
+  // Save answers to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('questionnaireAnswers', JSON.stringify(answers))
+  }, [answers])
 
   const handleNext = () => {
     if (step < totalSteps) {
       setStep(step + 1)
     } else if (isQuestionAnswered()) {
       console.log('Submitting answers:', answers)
-      router.push('/processing')
+      // Encode the answers object as a URL-safe string
+      const encodedAnswers = encodeURIComponent(JSON.stringify(answers))
+      router.push(`/results?answers=${encodedAnswers}`)
+      // Clear the saved answers from localStorage after submission
+      localStorage.removeItem('questionnaireAnswers')
     } else {
       // If the last question is not answered, don't proceed
       alert("Please answer the last question before finding resorts.")
@@ -197,7 +217,7 @@ export default function Questionnaire() {
           >
             {answers.countries?.length > 0
               ? answers.countries.join(", ")
-              : "Anywhere"} {/* Updated button content */}
+              : "Anywhere"}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>

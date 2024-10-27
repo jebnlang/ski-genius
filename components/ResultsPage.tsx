@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Image from 'next/image'
 import { useCompletion } from 'ai/react'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Snowflake, Users, Mountain, Martini, TreePine, MapPin } from 'lucide-react'
+import { DollarSign, Snowflake, Users, Mountain, Martini, MapPin } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useSearchParams } from 'next/navigation'
 
 interface Resort {
   name: string
@@ -14,7 +15,12 @@ interface Resort {
   country: string
   matchPercentage: number
   difficulty: {
-    beginner: number
+    easy: number
+    intermediate: number
+    advanced: number
+  }
+  runs: {
+    easy: number
     intermediate: number
     advanced: number
   }
@@ -37,164 +43,231 @@ interface Resort {
   highlights: string[]
 }
 
-const DifficultyBar = ({ difficulty }: { difficulty: Resort['difficulty'] }) => (
-  <div className="flex items-center space-x-2">
-    <div className="w-full bg-gray-200 rounded-full h-2.5">
-      <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${difficulty.beginner}%` }}></div>
-    </div>
-    <div className="w-full bg-gray-200 rounded-full h-2.5">
-      <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${difficulty.intermediate}%` }}></div>
-    </div>
-    <div className="w-full bg-gray-200 rounded-full h-2.5">
-      <div className="bg-red-500 h-2.5 rounded-full" style={{ width: `${difficulty.advanced}%` }}></div>
-    </div>
-  </div>
+const DifficultyBar = ({ difficulty, runs }: { difficulty: Resort['difficulty'], runs: Resort['runs'] }) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center space-x-1 cursor-help">
+          <div className="w-full bg-gray-700 rounded-full h-2">
+            <div className="bg-blue-500 h-2 rounded-l-full" style={{ width: `${difficulty.easy}%` }}></div>
+          </div>
+          <div className="w-full bg-gray-700 rounded-full h-2">
+            <div className="bg-red-500 h-2" style={{ width: `${difficulty.intermediate}%` }}></div>
+          </div>
+          <div className="w-full bg-gray-700 rounded-full h-2">
+            <div className="bg-gray-900 h-2 rounded-r-full" style={{ width: `${difficulty.advanced}%` }}></div>
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="text-sm">
+          <p>Easy (Blue): {runs.easy} runs</p>
+          <p>Intermediate (Red): {runs.intermediate} runs</p>
+          <p>Advanced (Black): {runs.advanced} runs</p>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
 )
 
 const PriceLevel = ({ level }: { level: number }) => (
   <div className="flex items-center">
     {[...Array(4)].map((_, i) => (
-      <DollarSign key={i} className={`w-4 h-4 ${i < level ? 'text-primary' : 'text-gray-300'}`} />
+      <DollarSign key={i} className={`w-3 h-3 ${i < level ? 'text-cyan-500' : 'text-gray-600'}`} />
     ))}
   </div>
 )
 
 const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
-  <Card className="w-full max-w-md">
-    <CardHeader>
-      <CardTitle className="flex justify-between items-center">
-        <span>{resort.name}</span>
-        <Badge variant="secondary">{rank}</Badge>
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="aspect-video relative mb-4">
-        <Image
-          src={`/placeholder.svg?height=400&width=600&text=${encodeURIComponent(resort.name)}`}
-          alt={resort.name}
-          layout="fill"
-          objectFit="cover"
-          className="rounded-md"
-        />
-        <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground">
+  <Card className="w-full bg-gray-800 border-gray-700 text-white hover:bg-gray-750 transition-colors">
+    <CardHeader className="p-4 pb-2">
+      <div className="flex justify-between items-start">
+        <div>
+          <CardTitle className="text-xl font-bold">{resort.name}</CardTitle>
+          <div className="flex items-center text-sm text-gray-400 mt-1">
+            <MapPin className="w-3 h-3 mr-1" /> 
+            {resort.location}, {resort.country}
+          </div>
+        </div>
+        <Badge variant="secondary" className="bg-gray-700 text-cyan-400">{rank}</Badge>
+      </div>
+      <div className="flex items-center mt-2">
+        <Badge className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white">
           {resort.matchPercentage}% Match
         </Badge>
       </div>
-      <p className="text-muted-foreground mb-2 flex items-center">
-        <MapPin className="w-4 h-4 mr-1" /> {resort.location}, {resort.country}
-      </p>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Difficulty</span>
-          <DifficultyBar difficulty={resort.difficulty} />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Snow Condition</span>
-          <div className="flex items-center">
-            <Snowflake className="w-4 h-4 mr-1 text-blue-500" />
-            <span>{resort.snowCondition}</span>
-          </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Price Level</span>
-          <PriceLevel level={resort.priceLevel} />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Suitable For</span>
-          <div className="flex items-center">
-            <Users className="w-4 h-4 mr-1" />
-            <span>{resort.suitableFor.join(', ')}</span>
-          </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Ski Area</span>
-          <span>{resort.skiArea}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Lift System</span>
-          <span>{resort.liftSystem}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Nightlife</span>
-          <div className="flex items-center">
-            <Martini className="w-4 h-4 mr-1" />
-            <span>{resort.nightlife}</span>
-          </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Family Friendly</span>
-          <span>{resort.familyFriendly ? 'Yes' : 'No'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Snow Park</span>
-          <span>{resort.snowPark ? 'Yes' : 'No'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Off-Piste</span>
-          <span>{resort.offPiste ? 'Available' : 'Limited'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Ski-in/Ski-out</span>
-          <span>{resort.skiInSkiOut ? 'Yes' : 'No'}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Nearest Airport</span>
-          <span>{resort.nearestAirport}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Transfer Time</span>
-          <span>{resort.transferTime}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Altitude</span>
-          <span>{resort.altitude}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="font-semibold">Season Dates</span>
-          <span>{resort.seasonDates}</span>
+    </CardHeader>
+    <CardContent className="p-4 pt-2 grid grid-cols-2 gap-3 text-sm">
+      <div>
+        <span className="text-gray-400">Difficulty:</span>
+        <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
+      </div>
+      <div>
+        <span className="text-gray-400">Snow:</span>
+        <div className="flex items-center">
+          <Snowflake className="w-3 h-3 mr-1 text-cyan-500" />
+          <span>{resort.snowCondition}</span>
         </div>
       </div>
-      <div className="mt-4">
-        <span className="font-semibold">Terrain Types</span>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {resort.terrainTypes.map((terrain, index) => (
-            <Badge key={index} variant="outline">
-              <TreePine className="w-4 h-4 mr-1" /> {terrain}
-            </Badge>
-          ))}
+      <div>
+        <span className="text-gray-400">Price:</span>
+        <PriceLevel level={resort.priceLevel} />
+      </div>
+      <div>
+        <span className="text-gray-400">For:</span>
+        <div className="flex items-center">
+          <Users className="w-3 h-3 mr-1 text-cyan-500" />
+          <span>{resort.suitableFor.join(', ')}</span>
         </div>
       </div>
-      <div className="mt-4">
-        <span className="font-semibold">Additional Activities</span>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {resort.additionalActivities.map((activity, index) => (
-            <Badge key={index} variant="outline">
-              <Snowflake className="w-4 h-4 mr-1" /> {activity}
-            </Badge>
-          ))}
+      <div>
+        <span className="text-gray-400">Ski Area:</span>
+        <p>{resort.skiArea}</p>
+      </div>
+      <div>
+        <span className="text-gray-400">Lifts:</span>
+        <p>{resort.liftSystem}</p>
+      </div>
+      <div>
+        <span className="text-gray-400">Nightlife:</span>
+        <div className="flex items-center">
+          <Martini className="w-3 h-3 mr-1 text-cyan-500" />
+          <span>{resort.nightlife}</span>
         </div>
       </div>
-      <div className="mt-4">
-        <span className="font-semibold">Highlights</span>
-        <ul className="list-disc list-inside mt-1">
+      <div>
+        <span className="text-gray-400">Family:</span>
+        <p>{resort.familyFriendly ? 'Yes' : 'No'}</p>
+      </div>
+      <div className="col-span-2">
+        <span className="text-gray-400">Highlights:</span>
+        <ul className="list-disc list-inside mt-1 space-y-1">
           {resort.highlights.map((highlight, index) => (
-            <li key={index} className="text-sm flex items-center">
-              <Mountain className="w-4 h-4 mr-1" /> {highlight}
+            <li key={index} className="flex items-center">
+              <Mountain className="w-3 h-3 mr-2 text-cyan-500" />
+              <span>{highlight}</span>
             </li>
           ))}
         </ul>
       </div>
     </CardContent>
-    <CardFooter>
-      <Button className="w-full">View Details</Button>
-    </CardFooter>
+    <div className="p-4 pt-0">
+      <Button className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 transition-all duration-200 ease-in-out rounded-full shadow-md">
+        View Details
+      </Button>
+    </div>
   </Card>
 )
+
+const mockResorts: Resort[] = [
+  {
+    name: "Chamonix",
+    location: "French Alps",
+    country: "France",
+    matchPercentage: 95,
+    difficulty: {
+      easy: 20,
+      intermediate: 40,
+      advanced: 40
+    },
+    runs: {
+      easy: 10,
+      intermediate: 20,
+      advanced: 20
+    },
+    snowCondition: "Excellent",
+    priceLevel: 3,
+    suitableFor: ["Advanced Skiers", "Off-Piste Enthusiasts"],
+    skiArea: "170km of pistes",
+    liftSystem: "Modern, high-speed lifts",
+    nightlife: "Vibrant",
+    familyFriendly: false,
+    snowPark: true,
+    offPiste: true,
+    skiInSkiOut: false,
+    nearestAirport: "Geneva Airport",
+    transferTime: "1 hour",
+    altitude: "1,035m - 3,842m",
+    seasonDates: "December to May",
+    terrainTypes: ["Glaciers", "Steep Slopes", "Off-Piste"],
+    additionalActivities: ["Paragliding", "Ice Climbing"],
+    highlights: ["World-renowned off-piste skiing", "Breathtaking Mont Blanc views", "Challenging terrain for experts"]
+  },
+  {
+    name: "Zermatt",
+    location: "Swiss Alps",
+    country: "Switzerland",
+    matchPercentage: 88,
+    difficulty: {
+      easy: 25,
+      intermediate: 50,
+      advanced: 25
+    },
+    runs: {
+      easy: 25,
+      intermediate: 50,
+      advanced: 25
+    },
+    snowCondition: "Very Good",
+    priceLevel: 4,
+    suitableFor: ["Intermediate Skiers", "Luxury Seekers"],
+    skiArea: "360km of pistes",
+    liftSystem: "State-of-the-art lifts",
+    nightlife: "Moderate",
+    familyFriendly: true,
+    snowPark: true,
+    offPiste: true,
+    skiInSkiOut: true,
+    nearestAirport: "Zurich Airport",
+    transferTime: "3.5 hours",
+    altitude: "1,620m - 3,883m",
+    seasonDates: "November to April",
+    terrainTypes: ["Groomed Runs", "Glacier Skiing"],
+    additionalActivities: ["Snowshoeing", "Gourmet Dining"],
+    highlights: ["Car-free village", "Iconic Matterhorn views", "Year-round skiing on glaciers"]
+  },
+  {
+    name: "St. Anton",
+    location: "Tyrol",
+    country: "Austria",
+    matchPercentage: 82,
+    difficulty: {
+      easy: 10,
+      intermediate: 40,
+      advanced: 50
+    },
+    runs: {
+      easy: 5,
+      intermediate: 20,
+      advanced: 25
+    },
+    snowCondition: "Good",
+    priceLevel: 3,
+    suitableFor: ["Advanced Skiers", "Party Lovers"],
+    skiArea: "305km of pistes",
+    liftSystem: "Efficient lift network",
+    nightlife: "Vibrant",
+    familyFriendly: false,
+    snowPark: true,
+    offPiste: true,
+    skiInSkiOut: false,
+    nearestAirport: "Innsbruck Airport",
+    transferTime: "1.5 hours",
+    altitude: "1,304m - 2,811m",
+    seasonDates: "December to April",
+    terrainTypes: ["Powder Bowls", "Steep Chutes"],
+    additionalActivities: ["Apres-Ski", "Tobogganing"],
+    highlights: ["Legendary apres-ski scene", "Extensive Arlberg ski area", "Challenging off-piste terrain"]
+  }
+]
 
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Add this to get the search params
+  const searchParams = useSearchParams()
 
   const { complete } = useCompletion({
     api: '/api/chat',
@@ -203,12 +276,41 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const prompt = `Based on the user's preferences from the questionnaire, suggest 3 ski resorts from Europe only with the following details for each:
+        // Parse the answers from the search params
+        const encodedAnswers = searchParams?.get('answers')
+        if (!encodedAnswers) {
+          throw new Error('No answers provided')
+        }
+        const answers = JSON.parse(decodeURIComponent(encodedAnswers))
+
+        // Construct the prompt using all the answers from the questionnaire
+        const prompt = `Based on the following user preferences from the questionnaire:
+        - Group type: ${answers.groupType}
+        - Children ages: ${answers.childrenAges?.join(', ') || 'N/A'}
+        - Ski or snowboard: ${answers.skiOrSnowboard}
+        - Desired countries: ${answers.countries?.join(', ') || 'Anywhere'}
+        - Skiing levels: ${answers.skiingLevels?.join(', ')}
+        - Lessons needed: ${answers.lessons}
+        - Nightlife importance: ${answers.nightlife}
+        - Snow park importance: ${answers.snowPark}
+        - Off-piste importance: ${answers.offPiste}
+        - Ski-in/ski-out preference: ${answers.skiInSkiOut}
+        - Resort preferences: ${answers.resortPreferences?.join(', ')}
+        - Slope preferences: ${answers.slopePreferences?.join(', ')}
+        - Other activities: ${answers.otherActivities?.join(', ')}
+        - Loved resorts: ${answers.lovedResorts}
+        - Travel time: ${answers.travelTime}
+        - Travel month: ${answers.travelMonth?.join(', ') || 'Flexible'}
+        - Additional info: ${answers.additionalInfo}
+
+        Suggest 3 ski resorts that best match these preferences. The resorts should be in Europe and closely align with the user's input. For each resort, provide the following details:
+
         - name
         - location
         - country
-        - matchPercentage (between 80 and 100)
-        - difficulty (object with beginner, intermediate, advanced percentages)
+        - matchPercentage (between 80 and 100, based on how well it matches the user's preferences)
+        - difficulty (object with easy, intermediate, advanced percentages)
+        - runs (object with easy, intermediate, advanced number of runs)
         - snowCondition (Excellent, Very Good, or Good)
         - priceLevel (1-4)
         - suitableFor (array of group types, e.g., ["Families", "Couples"])
@@ -223,53 +325,79 @@ export default function ResultsPage() {
         - transferTime
         - altitude (e.g., "1500m - 3000m")
         - seasonDates (e.g., "December to April")
-        - terrainTypes (array of 2-3 terrain types from the questionnaire)
-        - additionalActivities (array of 2-3 activities from the questionnaire)
-        - highlights (array of 2-3 short phrases based on resort preferences from the questionnaire)
+        - terrainTypes (array of 2-3 terrain types that match the user's preferences)
+        - additionalActivities (array of 2-3 activities that match the user's preferences)
+        - highlights (array of 3 short phrases based on the resort's features that align with the user's preferences)
         
-        Ensure the results match the user's preferences for group type, skiing level, desired countries, and other specific requirements from the questionnaire. Respond with a JSON array of resort objects.`
+        Ensure that each resort recommendation directly addresses the user's preferences, including:
+        - Matching the desired countries or being a good alternative if 'Anywhere' was selected
+        - Suitable for the specified group type and children ages (if applicable)
+        - Appropriate for the indicated skiing levels
+        - Aligning with the importance placed on nightlife, snow parks, and off-piste skiing
+        - Meeting the ski-in/ski-out preference
+        - Offering the preferred resort and slope characteristics
+        - Providing opportunities for the desired additional activities
+        - Being available and suitable for the specified travel time and month(s)
+
+        Consider the additional information provided by the user to further refine the recommendations.
+
+        Respond with a JSON array of 3 resort objects that best match the user's preferences.`
+        
         const completion = await complete(prompt)
-        const parsedResorts = JSON.parse(completion || '[]')
-        setResorts(parsedResorts)
+        
+        // Remove any backticks and "json" tag that might be in the response
+        const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
+        
+        let parsedResorts
+        try {
+          parsedResorts = JSON.parse(cleanedCompletion)
+        } catch (parseError) {
+          console.error('Error parsing JSON:', parseError)
+          console.log('Received data:', cleanedCompletion)
+          throw new Error('Invalid JSON received from AI completion')
+        }
+        
+        if (Array.isArray(parsedResorts) && parsedResorts.length > 0) {
+          setResorts(parsedResorts)
+        } else {
+          throw new Error('No valid resort data received')
+        }
       } catch (error) {
         console.error('Error fetching results:', error)
-        setError('Failed to fetch resort recommendations')
+        setError('Failed to fetch personalized resort recommendations. Please try again later.')
+        // Use mock data in case of an error
+        setResorts(mockResorts)
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchResults()
-  }, [complete])
+  }, [complete, searchParams])
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center bg-[url('/ski-pattern.svg')] bg-repeat">
         <div className="text-center">
-          <h1 className="text-3xl font-bold mb-4">Finding Your Perfect Ski Destinations</h1>
-          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary mx-auto"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold mb-4">Error</h1>
-          <p className="text-xl text-red-600">{error}</p>
+          <h1 className="text-3xl font-bold mb-4 text-white">Finding Your Perfect Ski Destinations</h1>
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-cyan-500 mx-auto"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 bg-[url('/ski-pattern.svg')] bg-repeat">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">Your Perfect Ski Destinations</h1>
-        <p className="text-center text-muted-foreground mb-12">Based on your preferences, we&apos;ve found these amazing matches</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <h1 className="text-4xl font-bold text-center mb-8 text-white">Your Perfect Ski Destinations</h1>
+        <p className="text-center text-gray-400 mb-12">Based on your preferences, we've found these amazing matches</p>
+        {error && (
+          <div className="text-center text-red-500 mb-8">
+            <p>{error}</p>
+          </div>
+        )}
+        
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {resorts.map((resort, index) => (
             <ResortCard key={index} resort={resort} rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} />
           ))}
