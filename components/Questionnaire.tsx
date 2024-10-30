@@ -72,11 +72,10 @@ const ProgressBar = ({ currentStep, totalSteps }: { currentStep: number; totalSt
   )
 }
 
-const QuestionNav = ({ currentStep, totalSteps, setStep, answers }: { 
+const QuestionNav = ({ currentStep, totalSteps, setStep }: { 
   currentStep: number; 
   totalSteps: number; 
   setStep: (step: number) => void;
-  answers: Answers;
 }) => {
   return (
     <div className="mb-6">
@@ -664,7 +663,6 @@ export default function Component() {
           currentStep={step} 
           totalSteps={totalSteps} 
           setStep={setStep} 
-          answers={answers}
         />
         {renderQuestion()}
         <div className="mt-8 flex justify-between">
