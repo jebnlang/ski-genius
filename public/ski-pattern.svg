@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Large Snowflake -->
+  <g transform="translate(50,50)">
+    <circle cx="0" cy="0" r="2" fill="currentColor"/>
+    <line x1="-12" y1="0" x2="12" y2="0" stroke="currentColor" stroke-width="1.5"/>
+    <line x1="0" y1="-12" x2="0" y2="12" stroke="currentColor" stroke-width="1.5"/>
+    <line x1="-8" y1="-8" x2="8" y2="8" stroke="currentColor" stroke-width="1.5"/>
+    <line x1="-8" y1="8" x2="8" y2="-8" stroke="currentColor" stroke-width="1.5"/>
+  </g>
+
+  <!-- Small Snowflake Top Left -->
+  <g transform="translate(15,15)">
+    <circle cx="0" cy="0" r="1" fill="currentColor"/>
+    <line x1="-6" y1="0" x2="6" y2="0" stroke="currentColor" stroke-width="1"/>
+    <line x1="0" y1="-6" x2="0" y2="6" stroke="currentColor" stroke-width="1"/>
+    <line x1="-4" y1="-4" x2="4" y2="4" stroke="currentColor" stroke-width="1"/>
+    <line x1="-4" y1="4" x2="4" y2="-4" stroke="currentColor" stroke-width="1"/>
+  </g>
+
+  <!-- Small Snowflake Bottom Right -->
+  <g transform="translate(85,85)">
+    <circle cx="0" cy="0" r="1" fill="currentColor"/>
+    <line x1="-6" y1="0" x2="6" y2="0" stroke="currentColor" stroke-width="1"/>
+    <line x1="0" y1="-6" x2="0" y2="6" stroke="currentColor" stroke-width="1"/>
+    <line x1="-4" y1="-4" x2="4" y2="4" stroke="currentColor" stroke-width="1"/>
+    <line x1="-4" y1="4" x2="4" y2="-4" stroke="currentColor" stroke-width="1"/>
+  </g>
+
+  <!-- Tiny Snowflake Top Right -->
+  <g transform="translate(85,15)">
+    <circle cx="0" cy="0" r="0.5" fill="currentColor"/>
+    <line x1="-4" y1="0" x2="4" y2="0" stroke="currentColor" stroke-width="0.75"/>
+    <line x1="0" y1="-4" x2="0" y2="4" stroke="currentColor" stroke-width="0.75"/>
+    <line x1="-3" y1="-3" x2="3" y2="3" stroke="currentColor" stroke-width="0.75"/>
+    <line x1="-3" y1="3" x2="3" y2="-3" stroke="currentColor" stroke-width="0.75"/>
+  </g>
+
+  <!-- Tiny Snowflake Bottom Left -->
+  <g transform="translate(15,85)">
+    <circle cx="0" cy="0" r="0.5" fill="currentColor"/>
+    <line x1="-4" y1="0" x2="4" y2="0" stroke="currentColor" stroke-width="0.75"/>
+    <line x1="0" y1="-4" x2="0" y2="4" stroke="currentColor" stroke-width="0.75"/>
+    <line x1="-3" y1="-3" x2="3" y2="3" stroke="currentColor" stroke-width="0.75"/>
+    <line x1="-3" y1="3" x2="3" y2="-3" stroke="currentColor" stroke-width="0.75"/>
+  </g>
+</svg> 
