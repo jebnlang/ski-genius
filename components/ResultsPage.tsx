@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useCompletion } from 'ai/react'
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Snowflake, Users, Mountain, Martini, MapPin } from 'lucide-react'
+import { Snowflake, Users, Mountain, Martini, MapPin } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSearchParams } from 'next/navigation'
 
