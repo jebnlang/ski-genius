@@ -55,3 +55,16 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+@keyframes snow {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.animate-snow {
+  animation: snow 20s linear infinite;
+}

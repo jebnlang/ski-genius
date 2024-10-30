@@ -54,15 +54,15 @@ const ProgressBar = ({ currentStep, totalSteps }: { currentStep: number; totalSt
   const progress = (currentStep / totalSteps) * 100
 
   return (
-    <div className="w-full bg-gray-700 rounded-full h-4 mb-6 relative overflow-hidden">
+    <div className="w-full bg-blue-100 rounded-full h-4 mb-6 relative overflow-hidden">
       <div
-        className="h-full rounded-full transition-all duration-300 ease-in-out bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"
+        className="h-full rounded-full transition-all duration-300 ease-in-out bg-gradient-to-r from-blue-300 to-blue-500"
         style={{ width: `${progress}%` }}
       ></div>
       {Array.from({ length: totalSteps }).map((_, index) => (
         <div
           key={index}
-          className={`absolute top-0 h-full border-r border-gray-600 ${
+          className={`absolute top-0 h-full border-r border-blue-200 ${
             index <= currentStep ? 'border-opacity-0' : 'border-opacity-50'
           }`}
           style={{ left: `${(index / totalSteps) * 100}%` }}
@@ -72,21 +72,62 @@ const ProgressBar = ({ currentStep, totalSteps }: { currentStep: number; totalSt
   )
 }
 
-export default function Questionnaire() {
+const QuestionNav = ({ currentStep, totalSteps, setStep, answers }: { 
+  currentStep: number; 
+  totalSteps: number; 
+  setStep: (step: number) => void;
+  answers: Answers;
+}) => {
+  return (
+    <div className="mb-6">
+      <div className="flex flex-wrap gap-2">
+        {Array.from({ length: totalSteps }).map((_, index) => {
+          const stepNumber = index + 1;
+          const isCurrentStep = stepNumber === currentStep;
+          
+          return (
+            <button
+              key={stepNumber}
+              onClick={() => setStep(stepNumber)}
+              className={`
+                w-8 h-8 rounded-full text-sm font-medium
+                ${isCurrentStep 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-white bg-opacity-50 text-gray-600 hover:bg-blue-100'}
+                transition-colors duration-200
+              `}
+            >
+              {stepNumber}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const getStoredAnswers = () => {
+  if (typeof window !== 'undefined') {
+    const savedAnswers = localStorage.getItem('questionnaireAnswers')
+    if (savedAnswers) {
+      try {
+        return JSON.parse(savedAnswers)
+      } catch (error) {
+        console.error('Error parsing saved answers:', error)
+        return null
+      }
+    }
+  }
+  return null
+}
+
+export default function Component() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const totalSteps = 15
   const [answers, setAnswers] = useState<Answers>(() => {
-    // Check if we're in a browser environment
-    if (typeof window !== 'undefined') {
-      // Try to load answers from localStorage
-      const savedAnswers = localStorage.getItem('questionnaireAnswers')
-      if (savedAnswers) {
-        return JSON.parse(savedAnswers)
-      }
-    }
-    // If no saved answers, return the initial state
-    return {
+    const savedAnswers = getStoredAnswers()
+    return savedAnswers || {
       groupType: '',
       childrenAges: [],
       skiOrSnowboard: '',
@@ -107,9 +148,24 @@ export default function Questionnaire() {
     }
   })
 
-  // Save answers to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('questionnaireAnswers', JSON.stringify(answers))
+    const saveAnswers = () => {
+      try {
+        localStorage.setItem('questionnaireAnswers', JSON.stringify(answers))
+      } catch (error) {
+        console.error('Error saving answers:', error)
+      }
+    }
+
+    // Save answers immediately when they change
+    saveAnswers()
+
+    // Also save answers when the user leaves/refreshes the page
+    window.addEventListener('beforeunload', saveAnswers)
+    
+    return () => {
+      window.removeEventListener('beforeunload', saveAnswers)
+    }
   }, [answers])
 
   const handleNext = () => {
@@ -117,13 +173,10 @@ export default function Questionnaire() {
       setStep(step + 1)
     } else if (isQuestionAnswered()) {
       console.log('Submitting answers:', answers)
-      // Encode the answers object as a URL-safe string
       const encodedAnswers = encodeURIComponent(JSON.stringify(answers))
       router.push(`/results?answers=${encodedAnswers}`)
-      // Clear the saved answers from localStorage after submission
       localStorage.removeItem('questionnaireAnswers')
     } else {
-      // If the last question is not answered, don't proceed
       alert("Please answer the last question before finding resorts.")
     }
   }
@@ -133,18 +186,29 @@ export default function Questionnaire() {
   }
 
   const handleAnswer = (question: keyof Answers, answer: string | string[]) => {
-    setAnswers((prevAnswers) => ({
-      ...prevAnswers,
-      [question]: question === 'countries' 
-        ? Array.isArray(answer) 
-          ? answer 
-          : typeof answer === 'string' 
-            ? answer === 'Anywhere'
-              ? ['Anywhere']
-              : [...(prevAnswers.countries.filter(c => c !== 'Anywhere')), answer].filter((c, i, arr) => arr.indexOf(c) === i)
-            : []
-        : answer
-    }))
+    setAnswers(prevAnswers => {
+      const newAnswers = {
+        ...prevAnswers,
+        [question]: question === 'countries' 
+          ? Array.isArray(answer) 
+            ? answer 
+            : typeof answer === 'string' 
+              ? answer === 'Anywhere'
+                ? ['Anywhere']
+                : [...(prevAnswers.countries.filter(c => c !== 'Anywhere')), answer].filter((c, i, arr) => arr.indexOf(c) === i)
+              : []
+          : answer
+      }
+      
+      // Save to localStorage immediately after state update
+      try {
+        localStorage.setItem('questionnaireAnswers', JSON.stringify(newAnswers))
+      } catch (error) {
+        console.error('Error saving answers:', error)
+      }
+      
+      return newAnswers
+    })
   }
 
   const handleMaxThreeSelection = (question: 'resortPreferences' | 'slopePreferences', value: string) => {
@@ -213,7 +277,7 @@ export default function Questionnaire() {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between bg-gray-800 text-white border-gray-700 hover:bg-gray-700 hover:text-white"
+            className="w-full justify-between bg-white text-gray-800 border-gray-300 hover:bg-gray-100 hover:text-gray-900"
           >
             {answers.countries?.length > 0
               ? answers.countries.join(", ")
@@ -221,16 +285,16 @@ export default function Questionnaire() {
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[200px] p-0 bg-gray-800 border-gray-700" align="start">
-          <Command className="bg-transparent">
+        <PopoverContent className="w-[200px] p-0 bg-white border-gray-300" align="start">
+          <Command>
             <CommandInput
               placeholder="Search countries..."
-              className="text-white placeholder-gray-400"
+              className="text-gray-800 placeholder-gray-500"
               value={search}
               onValueChange={setSearch}
             />
             <CommandList>
-              <CommandEmpty className="text-gray-400">No countries found.</CommandEmpty>
+              <CommandEmpty className="text-gray-500">No countries found.</CommandEmpty>
               <CommandGroup>
                 {filteredCountries.map((country) => {
                   const isSelected = answers.countries?.includes(country) ?? false;
@@ -265,7 +329,7 @@ export default function Questionnaire() {
                         });
                         setSearch("")
                       }}
-                      className="text-white hover:bg-gray-700"
+                      className="text-gray-800 hover:bg-gray-100"
                     >
                       <Check
                         className={cn(
@@ -290,18 +354,18 @@ export default function Questionnaire() {
       case 1:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Select your group type</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Select your group type</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('groupType', value)}>
               {['Couple', 'Group of friends', 'Family with children', 'Family without children', 'Mixed group family & friends'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-cyan-500 text-cyan-500" />
-                  <Label htmlFor={option} className="text-white hover:text-cyan-400 transition-colors">{option}</Label>
+                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
+                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
                 </div>
               ))}
             </RadioGroup>
             {answers.groupType === 'Family with children' && (
               <div className="mt-4">
-                <h3 className="text-xl font-semibold text-white">What are the ages of the children?</h3>
+                <h3 className="text-xl font-semibold text-gray-800">What are the ages of the children?</h3>
                 <div className="space-y-2 mt-2">
                   {['Under 5', '5-12', '13-17'].map((age) => (
                     <div key={age} className="flex items-center space-x-2">
@@ -315,9 +379,9 @@ export default function Questionnaire() {
                             handleAnswer('childrenAges', answers.childrenAges.filter((a) => a !== age))
                           }
                         }}
-                        className="border-cyan-500 text-cyan-500"
+                        className="border-blue-500 text-blue-500"
                       />
-                      <Label htmlFor={age} className="text-white hover:text-cyan-400 transition-colors">{age}</Label>
+                      <Label htmlFor={age} className="text-gray-800 hover:text-blue-500 transition-colors">{age}</Label>
                     </div>
                   ))}
                 </div>
@@ -328,12 +392,12 @@ export default function Questionnaire() {
       case 2:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Are you skiers or snowboarders?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Are you skiers or snowboarders?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('skiOrSnowboard', value)}>
               {['Skiers', 'Snowboarders', 'Mixed'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-cyan-500 text-cyan-500" />
-                  <Label htmlFor={option} className="text-white hover:text-cyan-400 transition-colors">{option}</Label>
+                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
+                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -342,16 +406,16 @@ export default function Questionnaire() {
       case 3:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Where would you like to ski? Pick any countries you like!</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Where would you like to ski? Pick any countries you like!</h2>
             <CountryAutocomplete />
             {answers.countries && answers.countries.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {answers.countries.map((country) => (
-                  <div key={country} className="bg-gray-700 text-white px-2 py-1 rounded-full text-sm flex items-center">
+                  <div key={country} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center">
                     {country}
                     <Button
                       variant="ghost"
-                      className="h-4 w-4 p-0 ml-2 text-white hover:text-cyan-400"
+                      className="h-4 w-4 p-0 ml-2 text-blue-800 hover:text-blue-600"
                       onClick={() => handleAnswer('countries', (answers.countries || []).filter(c => c !== country))}
                     >
                       <X className="h-3 w-3" />
@@ -365,7 +429,7 @@ export default function Questionnaire() {
       case 4:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">What are the skiing levels in your group?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">What are the skiing levels in your group?</h2>
             <div className="space-y-2">
               {['First timers', 'Beginners', 'Intermediates', 'Advanced'].map((level) => (
                 <div key={level} className="flex items-center space-x-2">
@@ -379,9 +443,10 @@ export default function Questionnaire() {
                         handleAnswer('skiingLevels', answers.skiingLevels.filter((l) => l !== level))
                       }
                     }}
-                    className="border-cyan-500 text-cyan-500"
+                    className="border-blue-500 text-blue-500"
                   />
-                  <Label htmlFor={level} className="text-white hover:text-cyan-400 transition-colors">{level}</Label>
+                  
+                  <Label htmlFor={level} className="text-gray-800 hover:text-blue-500 transition-colors">{level}</Label>
                 </div>
               ))}
             </div>
@@ -390,12 +455,12 @@ export default function Questionnaire() {
       case 5:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Would anyone in your group like ski or snowboard lessons?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Would anyone in your group like ski or snowboard lessons?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('lessons', value)}>
               {['Yes', 'No'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-cyan-500 text-cyan-500" />
-                  <Label htmlFor={option} className="text-white hover:text-cyan-400  transition-colors">{option}</Label>
+                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
+                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -404,12 +469,12 @@ export default function Questionnaire() {
       case 6:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">How important is nightlife and après-ski?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">How important is nightlife and après-ski?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('nightlife', value)}>
               {['Very important', 'Somewhat important', 'Not important'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-cyan-500 text-cyan-500" />
-                  <Label htmlFor={option} className="text-white hover:text-cyan-400 transition-colors">{option}</Label>
+                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
+                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -418,12 +483,12 @@ export default function Questionnaire() {
       case 7:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Is having a snow park important?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Is having a snow park important?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('snowPark', value)}>
               {['Very important', 'Somewhat important', 'Not important'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-cyan-500 text-cyan-500" />
-                  <Label htmlFor={option} className="text-white hover:text-cyan-400 transition-colors">{option}</Label>
+                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
+                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -432,12 +497,12 @@ export default function Questionnaire() {
       case 8:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">How important is having off-piste possibilities?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">How important is having off-piste possibilities?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('offPiste', value)}>
               {['Very important', 'Somewhat important', 'Not important'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-cyan-500 text-cyan-500" />
-                  <Label htmlFor={option} className="text-white hover:text-cyan-400 transition-colors">{option}</Label>
+                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
+                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -446,12 +511,12 @@ export default function Questionnaire() {
       case 9:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Do you prefer ski-in/ski-out resorts?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Do you prefer ski-in/ski-out resorts?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('skiInSkiOut', value)}>
               {['Yes, must have', 'Nice to have', "Don't care"].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-cyan-500 text-cyan-500" />
-                  <Label htmlFor={option} className="text-white hover:text-cyan-400 transition-colors">{option}</Label>
+                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
+                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -460,7 +525,7 @@ export default function Questionnaire() {
       case 10:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">What&apos;s most important to you in a resort? Pick up to 3 things!</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">What&apos;s most important to you in a resort? Pick up to 3 things!</h2>
             <div className="space-y-2">
               {['Extensive ski area', 'Less crowded slopes', 'Close to the airport', 'Family-friendly', 'Peaceful atmosphere', 'Scenic beauty', 'Modern lift system', 'Snow sure- High altitude resort'].map((preference) => (
                 <div key={preference} className="flex items-center space-x-2">
@@ -469,9 +534,9 @@ export default function Questionnaire() {
                     checked={answers.resortPreferences.includes(preference)}
                     onCheckedChange={() => handleMaxThreeSelection('resortPreferences', preference)}
                     disabled={answers.resortPreferences.length >= 3 && !answers.resortPreferences.includes(preference)}
-                    className="border-cyan-500 text-cyan-500"
+                    className="border-blue-500 text-blue-500"
                   />
-                  <Label htmlFor={preference} className="text-white hover:text-cyan-400 transition-colors">{preference}</Label>
+                  <Label htmlFor={preference} className="text-gray-800 hover:text-blue-500 transition-colors">{preference}</Label>
                 </div>
               ))}
             </div>
@@ -480,7 +545,7 @@ export default function Questionnaire() {
       case 11:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">What kind of slopes do you like best? Pick up to 3!</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">What kind of slopes do you like best? Pick up to 3!</h2>
             <div className="space-y-2">
               {['Groomed runs', 'Tree runs', 'Wide open runs', 'Glacier skiing', 'Steep challenging runs'].map((slope) => (
                 <div key={slope} className="flex items-center space-x-2">
@@ -489,9 +554,9 @@ export default function Questionnaire() {
                     checked={answers.slopePreferences.includes(slope)}
                     onCheckedChange={() => handleMaxThreeSelection('slopePreferences', slope)}
                     disabled={answers.slopePreferences.length >= 3 && !answers.slopePreferences.includes(slope)}
-                    className="border-cyan-500 text-cyan-500"
+                    className="border-blue-500 text-blue-500"
                   />
-                  <Label htmlFor={slope} className="text-white hover:text-cyan-400 transition-colors">{slope}</Label>
+                  <Label htmlFor={slope} className="text-gray-800 hover:text-blue-500 transition-colors">{slope}</Label>
                 </div>
               ))}
             </div>
@@ -500,7 +565,7 @@ export default function Questionnaire() {
       case 12:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Besides skiing, what other activities would you like to try?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Besides skiing, what other activities would you like to try?</h2>
             <div className="space-y-2">
               {["Spa/wellness facilities", "Great food scene", "Cross-country skiing", "Winter hiking", "Heli Skiing", "Cat skiing", "Ski touring", "Night skiing", "Sledding/Toboganning"].map((activity) => (
                 <div key={activity} className="flex items-center space-x-2">
@@ -514,9 +579,9 @@ export default function Questionnaire() {
                         handleAnswer('otherActivities', answers.otherActivities.filter((a) => a !== activity))
                       }
                     }}
-                    className="border-cyan-500 text-cyan-500"
+                    className="border-blue-500 text-blue-500"
                   />
-                  <Label htmlFor={activity} className="text-white hover:text-cyan-400 transition-colors">{activity}</Label>
+                  <Label htmlFor={activity} className="text-gray-800 hover:text-blue-500 transition-colors">{activity}</Label>
                 </div>
               ))}
             </div>
@@ -525,32 +590,32 @@ export default function Questionnaire() {
       case 13:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Have you visited any ski resorts you loved? We&apos;ll find more like them!</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Have you visited any ski resorts you loved? We&apos;ll find more like them!</h2>
             <Input
               placeholder="Enter resorts"
               value={answers.lovedResorts}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAnswer('lovedResorts', e.target.value)}
-              className="bg-gray-800 text-white border-gray-700 focus:border-cyan-500 focus:ring-cyan-500"
+              className="bg-white text-gray-800 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
         )      
       case 14:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">When do you want to go skiing?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">When do you want to go skiing?</h2>
             <RadioGroup onValueChange={(value) => handleAnswer('travelTime', value)}>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="month" id="month" className="border-cyan-500 text-cyan-500" />
-                <Label htmlFor="month" className="text-white hover:text-cyan-400 transition-colors">I know the month</Label>
+                <RadioGroupItem value="month" id="month" className="border-blue-500 text-blue-500" />
+                <Label htmlFor="month" className="text-gray-800 hover:text-blue-500 transition-colors">I know the month</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="flexible" id="flexible" className="border-cyan-500 text-cyan-500" />
-                <Label htmlFor="flexible" className="text-white hover:text-cyan-400 transition-colors">I&apos;m flexible</Label>
+                <RadioGroupItem value="flexible" id="flexible" className="border-blue-500 text-blue-500" />
+                <Label htmlFor="flexible" className="text-gray-800 hover:text-blue-500 transition-colors">I&apos;m flexible</Label>
               </div>
             </RadioGroup>
             {answers.travelTime === 'month' && (
               <div className="mt-4 space-y-2">
-                <h3 className="text-xl font-semibold text-white">Select the month(s)</h3>
+                <h3 className="text-xl font-semibold text-gray-800">Select the month(s)</h3>
                 {['December', 'January', 'February', 'March', 'April'].map((month) => (
                   <div key={month} className="flex items-center space-x-2">
                     <Checkbox
@@ -563,9 +628,9 @@ export default function Questionnaire() {
                           handleAnswer('travelMonth', answers.travelMonth.filter((m) => m !== month))
                         }
                       }}
-                      className="border-cyan-500 text-cyan-500"
+                      className="border-blue-500 text-blue-500"
                     />
-                    <Label htmlFor={month} className="text-white hover:text-cyan-400 transition-colors">{month}</Label>
+                    <Label htmlFor={month} className="text-gray-800 hover:text-blue-500 transition-colors">{month}</Label>
                   </div>
                 ))}
               </div>
@@ -575,12 +640,12 @@ export default function Questionnaire() {
       case 15:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-white">Is there anything else you&apos;d like to tell us about your perfect ski trip?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Is there anything else you&apos;d like to tell us about your perfect ski trip?</h2>
             <Textarea
               placeholder="Tell us more..."
               value={answers.additionalInfo}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleAnswer('additionalInfo', e.target.value)}
-              className="bg-gray-800 text-white border-gray-700 focus:border-cyan-500 focus:ring-cyan-500"
+              className="bg-white text-gray-800 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
         )
@@ -590,23 +655,31 @@ export default function Questionnaire() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center bg-[url('/ski-pattern.svg')] bg-repeat">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-lg max-w-2xl w-full border border-gray-700">
+    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden">
+      <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
+      <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow"></div>
+      <div className="bg-white bg-opacity-40 p-8 rounded-lg shadow-lg max-w-2xl w-full border border-white backdrop-blur-md relative z-10">
         <ProgressBar currentStep={step} totalSteps={totalSteps} />
+        <QuestionNav 
+          currentStep={step} 
+          totalSteps={totalSteps} 
+          setStep={setStep} 
+          answers={answers}
+        />
         {renderQuestion()}
         <div className="mt-8 flex justify-between">
           {step > 1 && (
             <Button 
               onClick={handlePrevious} 
               variant="outline"
-              className="bg-gray-700 text-white border-gray-600 hover:bg-gray-600 hover:text-cyan-400 transition-all duration-200 ease-in-out rounded-full px-6 py-2 shadow-md"
+              className="bg-white bg-opacity-50 text-gray-800 border-gray-300 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 ease-in-out rounded-full px-6 py-2 shadow-md backdrop-blur-sm"
             >
               Previous
             </Button>
           )}
           <Button 
             onClick={handleNext} 
-            className={`ml-auto bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 transition-all duration-200 ease-in-out rounded-full px-6 py-2 shadow-md ${
+            className={`ml-auto bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700 transition-all duration-200 ease-in-out rounded-full px-6 py-2 shadow-md ${
               isQuestionAnswered() ? 'opacity-100' : 'opacity-70 hover:opacity-100'
             }`}
           >
