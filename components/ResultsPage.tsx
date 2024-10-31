@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Snowflake, Users, Mountain, Martini, MapPin } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 
 interface Resort {
   name: string
