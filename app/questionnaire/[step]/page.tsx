@@ -8,7 +8,7 @@ interface PageProps {
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export default async function QuestionnairePage({ params, searchParams }: PageProps) {
+export default async function QuestionnairePage({ params }: PageProps) {
   await Promise.resolve(params)
 
   return (
