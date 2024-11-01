@@ -1,15 +1,14 @@
 import { Suspense } from 'react'
 import Component from '@/components/Questionnaire'
 
-interface PageProps {
-  params: {
-    step: string
-  }
+// Use the correct Next.js types
+type Props = {
+  params: Promise<{ step: string }>
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export default async function QuestionnairePage({ params }: PageProps) {
-  await Promise.resolve(params)
+export default async function QuestionnairePage(props: Props) {
+  const { step } = await props.params
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
