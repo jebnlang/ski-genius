@@ -8,8 +8,8 @@ type Props = {
 }
 
 export default async function QuestionnairePage(props: Props) {
-  const { step } = await props.params
-
+    const {} = await props.params; // if you still want to destructure
+    
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <Component />
