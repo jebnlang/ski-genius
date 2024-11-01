@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default async function QuestionnairePage({ params }: Props) {
-  const { step } = await Promise.resolve(params)
+  await Promise.resolve(params)
 
   return (
     <Suspense fallback={<div>Loading...</div>}>

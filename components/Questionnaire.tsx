@@ -101,12 +101,7 @@ const useQuestionnaireState = () => {
     })
   }
 
-  const clearAnswers = () => {
-    localStorage.removeItem(STORAGE_KEY)
-    setAnswers(defaultAnswers)
-  }
-
-  return [answers, updateAnswers, clearAnswers] as const
+  return [answers, updateAnswers] as const
 }
 
 // Helper function to get current step from pathname
@@ -286,7 +281,7 @@ const routeToStep = Object.entries(questionRoutes).reduce((acc, [step, route]) =
 export default function Component() {
   const router = useRouter()
   const pathname = usePathname()
-  const [answers, updateAnswers, clearAnswers] = useQuestionnaireState()
+  const [answers, updateAnswers] = useQuestionnaireState()
   
   // Update step management to work with URLs
   const [step, setStep] = useState(() => {
