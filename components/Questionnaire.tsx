@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -36,7 +36,7 @@ const defaultAnswers: Answers = {
   groupType: '',
   childrenAges: [],
   skiOrSnowboard: '',
-  countries: ['Anywhere'],
+  countries: [],
   skiingLevels: [],
   lessons: '',
   nightlife: '',
@@ -52,42 +52,68 @@ const defaultAnswers: Answers = {
   additionalInfo: ''
 }
 
+const STORAGE_KEY = 'ski_questionnaire_data'
+
+// Add a type for the storage state
+interface StorageState {
+  answers: Answers
+  lastUpdated: string
+  currentStep: number
+}
+
 const useQuestionnaireState = () => {
   const [answers, setAnswers] = useState<Answers>(defaultAnswers)
-  
-  // Move localStorage logic into a useEffect
+  const router = useRouter()
+  const pathname = usePathname()
+
+  // Load saved state from localStorage on mount
   useEffect(() => {
-    // Try to load saved answers from localStorage after component mounts
-    const saved = localStorage.getItem('answers')
-    if (saved) {
-      try {
-        const parsedAnswers = JSON.parse(saved)
-        setAnswers(parsedAnswers)
-      } catch (e) {
-        console.error('Error parsing saved answers:', e)
+    try {
+      const savedData = localStorage.getItem(STORAGE_KEY)
+      if (savedData) {
+        const { answers: savedAnswers, currentStep } = JSON.parse(savedData) as StorageState
+        setAnswers(savedAnswers)
+        
+        // If we're on the base questionnaire URL, redirect to the last active step
+        if (pathname === '/questionnaire') {
+          const route = questionRoutes[currentStep as keyof typeof questionRoutes]
+          router.push(`/questionnaire/${route}`)
+        }
       }
+    } catch (error) {
+      console.error('Error loading saved questionnaire data:', error)
     }
-  }, []) // Empty dependency array means this runs once on mount
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      localStorage.removeItem('answers')
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [])
+  }, [pathname, router])
 
   const updateAnswers = (updates: Partial<Answers>) => {
-    const newAnswers = { ...answers, ...updates }
-    setAnswers(newAnswers)
-    localStorage.setItem('answers', JSON.stringify(newAnswers))
+    setAnswers(prevAnswers => {
+      const newAnswers = { ...prevAnswers, ...updates }
+      
+      // Save the updated state to localStorage
+      const storageData: StorageState = {
+        answers: newAnswers,
+        lastUpdated: new Date().toISOString(),
+        currentStep: getCurrentStepFromPathname(pathname)
+      }
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
+      return newAnswers
+    })
   }
 
-  return [answers, updateAnswers] as const
+  const clearAnswers = () => {
+    localStorage.removeItem(STORAGE_KEY)
+    setAnswers(defaultAnswers)
+  }
+
+  return [answers, updateAnswers, clearAnswers] as const
+}
+
+// Helper function to get current step from pathname
+const getCurrentStepFromPathname = (pathname: string | null): number => {
+  if (!pathname) return 1
+  const route = pathname.split('/').pop()
+  return route ? routeToStep[route] || 1 : 1
 }
 
 const ProgressBar = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
@@ -148,30 +174,68 @@ const QuestionNav = ({ currentStep, totalSteps, setStep }: {
 const CountryAutocomplete = () => {
   const [answers, updateAnswers] = useQuestionnaireState()
 
+  // Initialize with "Anywhere" if countries array is empty
+  useEffect(() => {
+    if (answers.countries.length === 0) {
+      updateAnswers({ countries: ["Anywhere"] })
+    }
+  }, [answers.countries.length, updateAnswers])
+
   const handleSelect = (countryName: string) => {
     let newCountries: string[]
     
+    // If clicking Anywhere while it's already selected, do nothing
+    if (countryName === "Anywhere" && answers.countries.includes("Anywhere")) {
+      return
+    }
+
     if (countryName === "Anywhere") {
       newCountries = ["Anywhere"]
     } else {
-      let currentSelection = answers.countries.filter(c => c !== "Anywhere")
+      // Remove "Anywhere" and handle country selection
+      const currentSelection = answers.countries.filter(c => c !== "Anywhere")
       
       if (currentSelection.includes(countryName)) {
-        currentSelection = currentSelection.filter(c => c !== countryName)
+        // Remove country if already selected
+        newCountries = currentSelection.filter(c => c !== countryName)
       } else {
-        currentSelection = [...currentSelection, countryName]
+        // Add new country
+        newCountries = [...currentSelection, countryName]
       }
 
-      newCountries = currentSelection.length === 0 ? ["Anywhere"] : currentSelection
+      // If all countries were deselected, default back to "Anywhere"
+      if (newCountries.length === 0) {
+        newCountries = ["Anywhere"]
+      }
     }
 
     updateAnswers({ countries: newCountries })
   }
 
+  // Filter out "Anywhere" from the countries list
+  const countryOptions = countries.filter(country => country.name !== "Anywhere")
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
-        {countries.map((country) => (
+        <Button
+          key="anywhere"
+          variant={answers.countries.includes("Anywhere") ? "default" : "outline"}
+          className={cn(
+            "justify-start",
+            answers.countries.includes("Anywhere") && "bg-blue-500 text-white"
+          )}
+          onClick={() => handleSelect("Anywhere")}
+        >
+          <Check
+            className={cn(
+              "mr-2 h-4 w-4",
+              answers.countries.includes("Anywhere") ? "opacity-100" : "opacity-0"
+            )}
+          />
+          Anywhere
+        </Button>
+        {countryOptions.map((country) => (
           <Button
             key={country.id}
             variant={answers.countries.includes(country.name) ? "default" : "outline"}
@@ -195,11 +259,51 @@ const CountryAutocomplete = () => {
   )
 }
 
+const questionRoutes = {
+  1: 'group-type',
+  2: 'ski-or-snowboard',
+  3: 'location',
+  4: 'skill-level',
+  5: 'resort-size',
+  6: 'lessons',
+  7: 'nightlife',
+  8: 'snow-park',
+  9: 'off-piste',
+  10: 'ski-in-ski-out',
+  11: 'resort-preferences',
+  12: 'activities',
+  13: 'previous-resorts',
+  14: 'travel-time',
+  15: 'additional-info'
+}
+
+// Reverse mapping to get step number from route
+const routeToStep = Object.entries(questionRoutes).reduce((acc, [step, route]) => {
+  acc[route] = parseInt(step)
+  return acc
+}, {} as Record<string, number>)
+
 export default function Component() {
   const router = useRouter()
-  const [step, setStep] = useState(1)
+  const pathname = usePathname()
+  const [answers, updateAnswers, clearAnswers] = useQuestionnaireState()
+  
+  // Update step management to work with URLs
+  const [step, setStep] = useState(() => {
+    const route = pathname?.split('/').pop() // Add optional chaining
+    return route ? routeToStep[route] || 1 : 1
+  })
+
+  // Modify setStep to update URL
+  const handleSetStep = (newStep: number) => {
+    const route = questionRoutes[newStep as keyof typeof questionRoutes]
+    if (route) {
+      router.push(`/questionnaire/${route}`)
+      setStep(newStep)
+    }
+  }
+
   const totalSteps = 15
-  const [answers, updateAnswers] = useQuestionnaireState()
 
   const isQuestionAnswered = () => {
     switch (step) {
@@ -224,19 +328,32 @@ export default function Component() {
 
   const handleNext = () => {
     if (step < totalSteps) {
-      setStep(step + 1)
-    } else if (isQuestionAnswered()) {
-      const encodedAnswers = encodeURIComponent(JSON.stringify(answers))
-      localStorage.removeItem('answers')
-      router.push(`/results?answers=${encodedAnswers}`)
+      // Save current progress to localStorage
+      const storageData: StorageState = {
+        answers,
+        lastUpdated: new Date().toISOString(),
+        currentStep: step
+      }
+      localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
+      
+      handleSetStep(step + 1)
     } else {
-      alert("Please answer the last question before finding resorts.")
+      // Save final answers before navigating to results
+      const storageData: StorageState = {
+        answers,
+        lastUpdated: new Date().toISOString(),
+        currentStep: step
+      }
+      localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
+      
+      // Navigate to results page
+      router.push('/results')
     }
   }
 
   const handlePrevious = () => {
     if (step > 1) {
-      setStep(step - 1)
+      handleSetStep(step - 1)
     }
   }
 
@@ -536,7 +653,7 @@ export default function Component() {
         <QuestionNav 
           currentStep={step} 
           totalSteps={totalSteps} 
-          setStep={setStep} 
+          setStep={handleSetStep} 
         />
         {renderQuestion()}
         <div className="mt-8 flex justify-between">

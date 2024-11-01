@@ -38,6 +38,12 @@ const Navbar = () => {
                 Resorts
               </Link>
               <Link
+                href="/questionnaire"
+                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                Find Your Resort
+              </Link>
+              <Link
                 href="/about"
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >

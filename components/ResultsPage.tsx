@@ -10,6 +10,7 @@ import { Snowflake, Users, Mountain, Martini, MapPin } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 interface Resort {
   name: string
@@ -264,13 +265,36 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]) => {
   return validResorts;
 };
 
+// Add this interface to match the storage structure
+interface StorageState {
+  answers: {
+    groupType: string
+    childrenAges: string[]
+    skiOrSnowboard: string
+    countries: string[]
+    skiingLevels: string[]
+    lessons: string
+    nightlife: string
+    snowPark: string
+    offPiste: string
+    skiInSkiOut: string
+    resortPreferences: string[]
+    slopePreferences: string[]
+    otherActivities: string[]
+    lovedResorts: string
+    travelTime: string
+    travelMonth: string[]
+    additionalInfo: string
+  }
+  lastUpdated: string
+  currentStep: number
+}
+
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Add this to get the search params
-  const searchParams = useSearchParams()
+  const router = useRouter()
 
   const { complete } = useCompletion({
     api: '/api/chat',
@@ -279,114 +303,131 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        // Parse the answers from the search params
-        const encodedAnswers = searchParams?.get('answers')
-        if (!encodedAnswers) {
-          throw new Error('No answers provided')
+        // Check for localStorage data
+        const savedData = localStorage.getItem('ski_questionnaire_data')
+        if (!savedData) {
+          // If no data found, redirect to questionnaire
+          router.push('/questionnaire')
+          return
         }
-        const answers = JSON.parse(decodeURIComponent(encodedAnswers))
 
-        // Add emphasis on country selection in the prompt
-        const prompt = `Based on the following user preferences from the questionnaire:
-        - Group type: ${answers.groupType}
-        - Children ages: ${answers.childrenAges?.join(', ') || 'N/A'}
-        - Ski or snowboard: ${answers.skiOrSnowboard}
-        - Desired countries: ${answers.countries?.join(', ') || 'Anywhere'}
-        - Skiing levels: ${answers.skiingLevels?.join(', ')}
-        - Resort size preference: ${answers.slopePreferences?.join(', ')}
-        - Lessons needed: ${answers.lessons}
-        - Nightlife importance: ${answers.nightlife}
-        - Snow park importance: ${answers.snowPark}
-        - Off-piste importance: ${answers.offPiste}
-        - Ski-in/ski-out preference: ${answers.skiInSkiOut}
-        - Resort preferences: ${answers.resortPreferences?.join(', ')}
-        - Other activities: ${answers.otherActivities?.join(', ')}
-        - Loved resorts: ${answers.lovedResorts}
-        - Travel time: ${answers.travelTime}
-        - Travel month: ${answers.travelMonth?.join(', ') || 'Flexible'}
-        - Additional info: ${answers.additionalInfo}
-
-        IMPORTANT: You must ONLY suggest resorts from these countries: ${answers.countries?.join(', ')}
-        If "Anywhere" is selected, you may suggest resorts from any European country.
-        DO NOT suggest resorts from countries that weren't selected.
-
-        Suggest 3 ski resorts that best match these preferences. The resorts should be in Europe and closely align with the user's input. For each resort, provide the following details:
-
-        - name
-        - location
-        - country
-        - difficulty (object with easy, intermediate, advanced percentages)
-        - runs (object with easy, intermediate, advanced number of runs)
-        - snowCondition (Excellent, Very Good, or Good)
-        - suitableFor (array of group types, e.g., ["Families", "Couples"])
-        - skiArea (e.g., "200km of pistes")
-        - liftSystem (e.g., "Modern, high-speed lifts")
-        - nightlife (Vibrant, Moderate, or Quiet)
-        - familyFriendly (boolean)
-        - snowPark (boolean)
-        - offPiste (boolean)
-        - skiInSkiOut (boolean)
-        - nearestAirport
-        - transferTime
-        - altitude (e.g., "1500m - 3000m")
-        - seasonDates (e.g., "December to April")
-        - terrainTypes (array of 2-3 terrain types that match the user's preferences)
-        - additionalActivities (array of 2-3 activities that match the user's preferences)
-        - highlights (array of 3 short phrases based on the resort's features that align with the user's preferences)
-        - explanation (1-2 sentences explaining why this resort was chosen based on the user's specific preferences)
-
-        Ensure that each resort recommendation directly addresses the user's preferences, including:
-        - Matching the desired countries or being a good alternative if 'Anywhere' was selected
-        - Suitable for the specified group type and children ages (if applicable)
-        - Appropriate for the indicated skiing levels
-        - Matching the preferred resort size (small and charming, medium-sized, or large ski area)
-        - Aligning with the importance placed on nightlife, snow parks, and off-piste skiing
-        - Meeting the ski-in/ski-out preference
-        - Offering the preferred resort characteristics (from their top 3 choices)
-        - Providing opportunities for the desired additional activities
-        - Being available and suitable for the specified travel time and month(s)
-
-        Consider the additional information provided by the user to further refine the recommendations.
-
-        Respond with a JSON array of 3 resort objects that best match the user's preferences.`
-        
-        const completion = await complete(prompt)
-        
-        // Remove any backticks and "json" tag that might be in the response
-        const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-        
-        let parsedResorts
+        let parsedData: StorageState
         try {
-          parsedResorts = JSON.parse(cleanedCompletion)
-        } catch (parseError) {
-          console.error('Error parsing JSON:', parseError)
-          console.log('Received data:', cleanedCompletion)
-          throw new Error('Invalid JSON received from AI completion')
+          parsedData = JSON.parse(savedData)
+        } catch (e) {
+          console.error('Error parsing stored data:', e)
+          router.push('/questionnaire')
+          return
         }
-        
-        if (Array.isArray(parsedResorts) && parsedResorts.length > 0) {
-          // Validate that resorts match selected countries
-          const validatedResorts = validateResorts(parsedResorts, answers.countries)
+
+        const { answers } = parsedData
+
+        // Use mock data if something goes wrong with the API
+        try {
+          const prompt = `Based on the following user preferences from the questionnaire:
+          - Group type: ${answers.groupType}
+          - Children ages: ${answers.childrenAges?.join(', ') || 'N/A'}
+          - Ski or snowboard: ${answers.skiOrSnowboard}
+          - Desired countries: ${answers.countries?.join(', ') || 'Anywhere'}
+          - Skiing levels: ${answers.skiingLevels?.join(', ')}
+          - Resort size preference: ${answers.slopePreferences?.join(', ')}
+          - Lessons needed: ${answers.lessons}
+          - Nightlife importance: ${answers.nightlife}
+          - Snow park importance: ${answers.snowPark}
+          - Off-piste importance: ${answers.offPiste}
+          - Ski-in/ski-out preference: ${answers.skiInSkiOut}
+          - Resort preferences: ${answers.resortPreferences?.join(', ')}
+          - Other activities: ${answers.otherActivities?.join(', ')}
+          - Loved resorts: ${answers.lovedResorts}
+          - Travel time: ${answers.travelTime}
+          - Travel month: ${answers.travelMonth?.join(', ') || 'Flexible'}
+          - Additional info: ${answers.additionalInfo}
+
+          CRITICAL REQUIREMENTS:
+          1. COUNTRY RESTRICTION: You must ONLY suggest resorts from these countries: ${answers.countries?.join(', ')}
+             If "Anywhere" is selected, you may suggest resorts from any European country.
+             Under no circumstances suggest resorts from countries that weren't selected.
+
+          2. SIMILAR TO LOVED RESORTS: The user loved these resorts: ${answers.lovedResorts}
+             If the user specified any loved resorts, at least one recommendation should have similar characteristics 
+             (terrain type, atmosphere, size) to their loved resorts.
+
+          3. DIVERSE SUGGESTIONS: While one recommendation can be a well-known resort, at least one recommendation 
+             should be a hidden gem or lesser-known resort that matches their preferences. Look for unique, 
+             off-the-beaten-path destinations that tourists might not typically consider but would love to discover.
+
+          Suggest 3 ski resorts that best match these preferences. The resorts should be in Europe and closely align 
+          with the user's input. For each resort, provide the following details:
+
+          - name
+          - location
+          - country
+          - difficulty (object with easy, intermediate, advanced percentages)
+          - runs (object with easy, intermediate, advanced number of runs)
+          - snowCondition (Excellent, Very Good, or Good)
+          - suitableFor (array of group types, e.g., ["Families", "Couples"])
+          - skiArea (e.g., "200km of pistes")
+          - liftSystem (e.g., "Modern, high-speed lifts")
+          - nightlife (Vibrant, Moderate, or Quiet)
+          - familyFriendly (boolean)
+          - snowPark (boolean)
+          - offPiste (boolean)
+          - skiInSkiOut (boolean)
+          - nearestAirport
+          - transferTime
+          - altitude (e.g., "1500m - 3000m")
+          - seasonDates (e.g., "December to April")
+          - terrainTypes (array of 2-3 terrain types that match the user's preferences)
+          - additionalActivities (array of 2-3 activities that match the user's preferences)
+          - highlights (array of 3 short phrases based on the resort's features that align with the user's preferences)
+          - explanation (1-2 sentences explaining why this resort was chosen based on the user's specific preferences)
+
+          Ensure that each resort recommendation directly addresses the user's preferences, including:
+          - Matching the desired countries
+          - Suitable for the specified group type and children ages (if applicable)
+          - Appropriate for the indicated skiing levels
+          - Matching the preferred resort size (small and charming, medium-sized, or large ski area)
+          - Aligning with the importance placed on nightlife, snow parks, and off-piste skiing
+          - Meeting the ski-in/ski-out preference
+          - Offering the preferred resort characteristics (from their top 3 choices)
+          - Providing opportunities for the desired additional activities
+          - Being available and suitable for the specified travel time and month(s)
+
+          Consider the additional information provided by the user to further refine the recommendations.
+
+          Respond with a JSON array of 3 resort objects that best match the user's preferences.`
           
-          if (validatedResorts.length > 0) {
-            setResorts(validatedResorts)
-          } else {
-            throw new Error('No resorts match selected countries')
+          const completion = await complete(prompt)
+          
+          // Remove any backticks and "json" tag that might be in the response
+          const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
+          
+          let parsedResorts
+          try {
+            parsedResorts = JSON.parse(cleanedCompletion)
+          } catch (parseError) {
+            console.error('Error parsing JSON:', parseError)
+            console.log('Received data:', cleanedCompletion)
+            throw new Error('Invalid JSON received from AI completion')
           }
-        } else {
-          throw new Error('No valid resort data received')
-        }
-      } catch (error) {
-        console.error('Error fetching results:', error)
-        setError('Failed to fetch personalized resort recommendations. Please try again later.')
-        
-        // If using mock data, filter it based on selected countries
-        if (searchParams?.get('answers')) {
-          const answers = JSON.parse(decodeURIComponent(searchParams.get('answers')!))
+          
+          if (Array.isArray(parsedResorts) && parsedResorts.length > 0) {
+            // Validate that resorts match selected countries
+            const validatedResorts = validateResorts(parsedResorts, answers.countries)
+            
+            if (validatedResorts.length > 0) {
+              setResorts(validatedResorts)
+            } else {
+              throw new Error('No resorts match selected countries')
+            }
+          } else {
+            throw new Error('No valid resort data received')
+          }
+        } catch (apiError) {
+          console.error('API Error:', apiError)
+          // Fall back to mock data
           const validatedMockResorts = validateResorts(mockResorts, answers.countries)
           setResorts(validatedMockResorts)
-        } else {
-          setResorts(mockResorts)
         }
       } finally {
         setIsLoading(false)
@@ -394,7 +435,10 @@ export default function ResultsPage() {
     }
 
     fetchResults()
-  }, [complete, searchParams])
+  }, [complete, router])
+
+  // Don't clear localStorage immediately - maybe clear it after successful API call
+  // or let it persist for a while in case user wants to go back
 
   if (isLoading) {
     return (
