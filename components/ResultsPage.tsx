@@ -271,7 +271,7 @@ interface StorageState {
   answers: {
     groupType: string
     childrenAges: string[]
-    skiOrSnowboard: string
+    sportType: string
     countries: string[]
     skiingLevels: string[]
     lessons: string
@@ -401,7 +401,7 @@ export default function ResultsPage() {
           const prompt = `Based on the following user preferences from the questionnaire:
           - Group type: ${answers.groupType}
           - Children ages: ${answers.childrenAges?.join(', ') || 'N/A'}
-          - Ski or snowboard: ${answers.skiOrSnowboard}
+          - Ski or snowboard: ${answers.sportType}
           - Desired countries: ${answers.countries?.join(', ') || 'Anywhere'}
           - Skiing levels: ${answers.skiingLevels?.join(', ')}
           - Resort size preference: ${answers.slopePreferences?.join(', ')}
