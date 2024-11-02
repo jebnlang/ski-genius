@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/utils/supabase'
 
 interface Resort {
   name: string
@@ -290,6 +291,79 @@ interface StorageState {
   currentStep: number
 }
 
+const saveToDatabase = async (answers: any, resorts: Resort[]) => {
+  try {
+    // First, save questionnaire answers
+    const { data: questionnaireData, error: questionnaireError } = await supabase
+      .from('questionnaire_answers')
+      .insert([{
+        group_type: answers.groupType,
+        children_ages: answers.childrenAges,
+        sport_type: answers.sportType,
+        countries: answers.countries,
+        skiing_levels: answers.skiingLevels,
+        lessons: answers.lessons,
+        nightlife: answers.nightlife,
+        snow_park: answers.snowPark,
+        off_piste: answers.offPiste,
+        ski_in_ski_out: answers.skiInSkiOut,
+        resort_preferences: answers.resortPreferences,
+        slope_preferences: answers.slopePreferences,
+        other_activities: answers.otherActivities,
+        loved_resorts: answers.lovedResorts,
+        travel_time: answers.travelTime,
+        travel_month: answers.travelMonth,
+        additional_info: answers.additionalInfo
+      }])
+      .select()
+
+    if (questionnaireError) {
+      console.error('Error saving questionnaire:', questionnaireError)
+      return
+    }
+
+    // Then, save each resort recommendation
+    const questionnaireId = questionnaireData[0].id
+    const resortsToInsert = resorts.map((resort, index) => ({
+      questionnaire_id: questionnaireId,
+      name: resort.name,
+      location: resort.location,
+      country: resort.country,
+      match_rank: index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick',
+      difficulty: resort.difficulty,
+      runs: resort.runs,
+      snow_condition: resort.snowCondition,
+      suitable_for: resort.suitableFor,
+      ski_area: resort.skiArea,
+      lift_system: resort.liftSystem,
+      nightlife: resort.nightlife,
+      family_friendly: resort.familyFriendly,
+      snow_park: resort.snowPark,
+      off_piste: resort.offPiste,
+      ski_in_ski_out: resort.skiInSkiOut,
+      nearest_airport: resort.nearestAirport,
+      transfer_time: resort.transferTime,
+      altitude: resort.altitude,
+      season_dates: resort.seasonDates,
+      terrain_types: resort.terrainTypes,
+      additional_activities: resort.additionalActivities,
+      highlights: resort.highlights,
+      explanation: resort.explanation,
+      image_url: '/placeholder.svg'
+    }))
+
+    const { error: resortsError } = await supabase
+      .from('resort_recommendations')
+      .insert(resortsToInsert)
+
+    if (resortsError) {
+      console.error('Error saving resorts:', resortsError)
+    }
+  } catch (error) {
+    console.error('Error in saveToDatabase:', error)
+  }
+}
+
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -417,6 +491,7 @@ export default function ResultsPage() {
             
             if (validatedResorts.length > 0) {
               setResorts(validatedResorts)
+              await saveToDatabase(answers, validatedResorts)
             } else {
               throw new Error('No resorts match selected countries')
             }
