@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -195,6 +195,7 @@ const routeToStep = Object.entries(questionRoutes).reduce((acc, [step, route]) =
 
 export default function Component() {
   const pathname = usePathname()
+  const router = useRouter()
   const [answers, updateAnswers] = useQuestionnaireState()
   
   // Update step management to work with URLs
@@ -203,20 +204,20 @@ export default function Component() {
     return route ? routeToStep[route] || 1 : 1
   })
 
-  // Modify setStep to update URL
+  // Modify handleSetStep to use router.push instead of window.location
   const handleSetStep = (newStep: number) => {
     // Save current state before navigation
     const storageData: StorageState = {
-      answers: answers, // Use the current state
+      answers: answers,
       lastUpdated: new Date().toISOString(),
-      currentStep: newStep // Use new step number
+      currentStep: newStep
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
     
     const route = questionRoutes[newStep as keyof typeof questionRoutes]
     if (route) {
-      window.location.href = `/questionnaire/${route}`
       setStep(newStep)
+      router.push(`/questionnaire/${route}`)
     }
   }
 
@@ -247,7 +248,7 @@ export default function Component() {
     if (step < totalSteps) {
       // Save current state before navigation
       const storageData: StorageState = {
-        answers: answers, // Use the current state
+        answers: answers,
         lastUpdated: new Date().toISOString(),
         currentStep: step + 1
       }
@@ -255,8 +256,8 @@ export default function Component() {
       
       handleSetStep(step + 1)
     } else {
-      // Final step - navigate to results
-      window.location.href = '/results'
+      // Final step - navigate to results using router
+      router.push('/results')
     }
   }
 
@@ -368,6 +369,7 @@ export default function Component() {
                         }
                       }
                       updateAnswers({ countries: newCountries });
+                      console.log('Updated countries:', newCountries);
                     }}
                     className="border-blue-500 text-blue-500"
                   />

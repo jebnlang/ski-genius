@@ -1,10 +1,61 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, Snowflake, Users, MapPin } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/utils/supabase'
+import { useRouter } from 'next/navigation'
+
+interface RecentResort {
+  id: string
+  name: string
+  country: string
+  match_rank: string
+  highlights: string[]
+  image_url: string
+  snow_condition: string
+  suitable_for: string[]
+}
 
 export default function Component() {
+  const router = useRouter()
+  const [recentRecommendations, setRecentRecommendations] = useState<RecentResort[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRecentRecommendations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('resort_recommendations')
+          .select('*')
+          .eq('match_rank', 'Best Match')
+          .order('created_at', { ascending: false })
+          .limit(6)
+
+        if (error) {
+          console.error('Error fetching recommendations:', error)
+          return
+        }
+
+        setRecentRecommendations(data || [])
+      } catch (error) {
+        console.error('Error:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchRecentRecommendations()
+  }, [])
+
+  const handleStartNewSearch = () => {
+    localStorage.removeItem('ski_questionnaire_data')
+    router.push('/questionnaire')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
@@ -19,10 +70,14 @@ export default function Component() {
           <p className="text-xl md:text-2xl mb-12 text-gray-600">
             AI-powered recommendations tailored to your experience and preferences
           </p>
-          <Button asChild size="lg" className="text-xl px-10 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700">
-            <Link href="/questionnaire" className="flex items-center">
+          <Button 
+            onClick={handleStartNewSearch}
+            size="lg" 
+            className="text-xl px-10 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700"
+          >
+            <span className="flex items-center">
               Start Your Search <ArrowRight className="ml-2 h-6 w-6" />
-            </Link>
+            </span>
           </Button>
         </div>
       </section>
@@ -53,34 +108,67 @@ export default function Component() {
       <section className="py-24 px-4 bg-gradient-to-b from-gray-100 to-blue-100">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">Recent Recommendations</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              { name: 'Alpine Paradise', country: 'Switzerland', difficulty: 'Intermediate', highlight: 'Perfect for families' },
-              { name: 'Snowy Peaks', country: 'France', difficulty: 'Advanced', highlight: 'Excellent off-piste' },
-              { name: 'Cozy Valley', country: 'Austria', difficulty: 'Beginner', highlight: 'Great ski school' },
-            ].map((resort, index) => (
-              <Card key={index} className="overflow-hidden transition-transform duration-300 hover:scale-105 bg-white bg-opacity-40 backdrop-blur-md border border-white">
-                <CardContent className="p-0">
-                  <Image
-                    src="/placeholder.svg?height=300&width=500"
-                    alt={resort.name}
-                    width={500}
-                    height={300}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-6">
-                    <h3 className="font-bold text-xl mb-2 text-gray-800">{resort.name}</h3>
-                    <p className="text-sm text-gray-600 mb-1">{resort.country}</p>
-                    <p className="text-sm mb-3 text-gray-700">Difficulty: {resort.difficulty}</p>
-                    <p className="text-sm font-medium text-blue-600">{resort.highlight}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          
+          {isLoading ? (
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+            </div>
+          ) : recentRecommendations.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {recentRecommendations.map((resort) => (
+                <Card 
+                  key={resort.id} 
+                  className="overflow-hidden transition-transform duration-300 hover:scale-105 bg-white bg-opacity-40 backdrop-blur-md border border-white"
+                >
+                  <CardContent className="p-0">
+                    <Image
+                      src={resort.image_url || "/placeholder.svg"}
+                      alt={resort.name}
+                      width={500}
+                      height={300}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="p-6">
+                      <h3 className="font-bold text-xl mb-2 text-gray-800">{resort.name}</h3>
+                      <p className="text-sm text-gray-600 mb-1">{resort.country}</p>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {resort.match_rank}
+                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {resort.snow_condition}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {resort.highlights && resort.highlights.slice(0, 1).map((highlight, index) => (
+                          <p key={index} className="text-sm font-medium text-blue-600">
+                            {highlight}
+                          </p>
+                        ))}
+                        {resort.suitable_for && (
+                          <p className="text-sm text-gray-600">
+                            Perfect for: {resort.suitable_for.slice(0, 2).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-600">
+              <p>No recommendations available yet.</p>
+            </div>
+          )}
+
           <div className="text-center mt-12">
-            <Button asChild size="lg" className="text-lg px-8 py-4 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700 transition-all duration-200 ease-in-out shadow-md">
-              <Link href="/questionnaire">Find Your Perfect Resort</Link>
+            <Button 
+              onClick={handleStartNewSearch}
+              size="lg" 
+              className="text-lg px-8 py-4 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700 transition-all duration-200 ease-in-out shadow-md"
+            >
+              Find Your Perfect Resort
             </Button>
           </div>
         </div>
