@@ -38,8 +38,10 @@ interface StorageState {
   currentStep: number
 }
 
+type SnowCondition = "Powder" | "Groomed" | "Packed" | "Ice" | "Spring"
+
 interface Resort {
-  snow_condition: any
+  snow_condition: SnowCondition
   name: string
   location: string
   country: string
