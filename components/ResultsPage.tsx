@@ -291,7 +291,7 @@ interface StorageState {
   currentStep: number
 }
 
-const saveToDatabase = async (answers: any, resorts: Resort[]) => {
+const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[]) => {
   try {
     // First, save questionnaire answers
     const { data: questionnaireData, error: questionnaireError } = await supabase
