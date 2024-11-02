@@ -38,12 +38,11 @@ const Navbar = () => {
               <Image
                 src="/logo.png"
                 alt="Ski Resort Logo"
-                width={100}
-                height={32}
+                width={500}
+                height={160}
                 style={{ 
-                  height: '32px',
-                  width: 'auto',
-                  maxWidth: 'none'
+                  width: '400px',
+                  height: 'auto',
                 }}
                 priority
               />
