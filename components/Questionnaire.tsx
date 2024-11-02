@@ -1,16 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Check } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { countries } from "@/lib/countries-data"
 
 interface Answers {
   groupType: string
@@ -63,7 +60,6 @@ interface StorageState {
 
 const useQuestionnaireState = () => {
   const [answers, setAnswers] = useState<Answers>(defaultAnswers)
-  const router = useRouter()
   const pathname = usePathname()
 
   // Load saved state from localStorage
@@ -198,7 +194,6 @@ const routeToStep = Object.entries(questionRoutes).reduce((acc, [step, route]) =
 }, {} as Record<string, number>)
 
 export default function Component() {
-  const router = useRouter()
   const pathname = usePathname()
   const [answers, updateAnswers] = useQuestionnaireState()
   
