@@ -215,7 +215,7 @@ export default function Component() {
     
     const route = questionRoutes[newStep as keyof typeof questionRoutes]
     if (route) {
-      router.push(`/questionnaire/${route}`)
+      window.location.href = `/questionnaire/${route}`
       setStep(newStep)
     }
   }
@@ -256,7 +256,7 @@ export default function Component() {
       handleSetStep(step + 1)
     } else {
       // Final step - navigate to results
-      router.push('/results')
+      window.location.href = '/results'
     }
   }
 
