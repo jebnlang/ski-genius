@@ -51,23 +51,44 @@ const DifficultyBar = ({ difficulty, runs }: { difficulty: Resort['difficulty'],
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="flex items-center space-x-1 cursor-help">
-          <div className="w-full bg-blue-100 rounded-full h-2">
-            <div className="bg-blue-400 h-2 rounded-l-full" style={{ width: `${difficulty.easy}%` }}></div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs w-16">Easy</span>
+            <div className="flex-1 bg-blue-100 rounded-full h-3">
+              <div 
+                className="bg-blue-400 h-3 rounded-full" 
+                style={{ width: `${difficulty.easy}%` }}
+              ></div>
+            </div>
+            <span className="text-xs w-8">{runs.easy}</span>
           </div>
-          <div className="w-full bg-blue-100 rounded-full h-2">
-            <div className="bg-red-400 h-2" style={{ width: `${difficulty.intermediate}%` }}></div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs w-16">Medium</span>
+            <div className="flex-1 bg-red-100 rounded-full h-3">
+              <div 
+                className="bg-red-400 h-3 rounded-full" 
+                style={{ width: `${difficulty.intermediate}%` }}
+              ></div>
+            </div>
+            <span className="text-xs w-8">{runs.intermediate}</span>
           </div>
-          <div className="w-full bg-blue-100 rounded-full h-2">
-            <div className="bg-gray-600 h-2 rounded-r-full" style={{ width: `${difficulty.advanced}%` }}></div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs w-16">Expert</span>
+            <div className="flex-1 bg-gray-100 rounded-full h-3">
+              <div 
+                className="bg-gray-600 h-3 rounded-full" 
+                style={{ width: `${difficulty.advanced}%` }}
+              ></div>
+            </div>
+            <span className="text-xs w-8">{runs.advanced}</span>
           </div>
         </div>
       </TooltipTrigger>
       <TooltipContent className="bg-white text-gray-800 border border-gray-200">
         <div className="text-sm">
-          <p>Easy (Blue): {runs.easy} runs</p>
-          <p>Intermediate (Red): {runs.intermediate} runs</p>
-          <p>Advanced (Black): {runs.advanced} runs</p>
+          <p>Easy (Blue): {runs.easy} runs ({difficulty.easy}%)</p>
+          <p>Intermediate (Red): {runs.intermediate} runs ({difficulty.intermediate}%)</p>
+          <p>Advanced (Black): {runs.advanced} runs ({difficulty.advanced}%)</p>
         </div>
       </TooltipContent>
     </Tooltip>
@@ -87,58 +108,62 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
         </div>
         <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">{rank}</Badge>
       </div>
-      {resort.explanation && (
-        <p className="text-sm text-gray-700 italic mt-2">{resort.explanation}</p>
-      )}
-    </CardHeader>
-    <CardContent className="p-4 pt-2 grid grid-cols-2 gap-3 text-sm">
-      <div className="col-span-2">
-        <span className="text-gray-600">Difficulty:</span>
-        <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
-      </div>
-      <div className="col-span-2">
-        <span className="text-gray-600">Ski Area:</span>
-        <p className="text-gray-800">{resort.skiArea}</p>
-      </div>
-      <div>
-        <span className="text-gray-600">Snow:</span>
-        <div className="flex items-center">
-          <Snowflake className="w-3 h-3 mr-1 text-blue-500" />
-          <span className="text-gray-800">{resort.snowCondition}</span>
-        </div>
-      </div>
-      <div>
-        <span className="text-gray-600">For:</span>
-        <div className="flex items-center">
-          <Users className="w-3 h-3 mr-1 text-blue-500" />
-          <span className="text-gray-800">{resort.suitableFor.join(', ')}</span>
-        </div>
-      </div>
-      <div>
-        <span className="text-gray-600">Lifts:</span>
-        <p className="text-gray-800">{resort.liftSystem}</p>
-      </div>
-      <div>
-        <span className="text-gray-600">Nightlife:</span>
-        <div className="flex items-center">
-          <Martini className="w-3 h-3 mr-1 text-blue-500" />
-          <span className="text-gray-800">{resort.nightlife}</span>
-        </div>
-      </div>
-      <div>
-        <span className="text-gray-600">Family:</span>
-        <p className="text-gray-800">{resort.familyFriendly ? 'Yes' : 'No'}</p>
-      </div>
-      <div className="col-span-2">
-        <span className="text-gray-600">Highlights:</span>
-        <ul className="list-disc list-inside mt-1 space-y-1">
+      
+      <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
+        <span className="text-blue-600 font-semibold mb-2 block">Resort Highlights:</span>
+        <ul className="space-y-2">
           {resort.highlights.map((highlight, index) => (
             <li key={index} className="flex items-center text-gray-800">
-              <Mountain className="w-3 h-3 mr-2 text-blue-500" />
-              <span>{highlight}</span>
+              <Mountain className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
+              <span className="text-sm font-medium">{highlight}</span>
             </li>
           ))}
         </ul>
+      </div>
+
+      {resort.explanation && (
+        <p className="text-sm text-gray-700 italic mt-3">{resort.explanation}</p>
+      )}
+    </CardHeader>
+    <CardContent className="p-4 pt-2">
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="col-span-2">
+          <span className="text-gray-600">Slope Distribution:</span>
+          <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
+        </div>
+        <div className="col-span-2">
+          <span className="text-gray-600">Ski Area:</span>
+          <p className="text-gray-800">{resort.skiArea}</p>
+        </div>
+        <div>
+          <span className="text-gray-600">Snow:</span>
+          <div className="flex items-center">
+            <Snowflake className="w-3 h-3 mr-1 text-blue-500" />
+            <span className="text-gray-800">{resort.snowCondition}</span>
+          </div>
+        </div>
+        <div>
+          <span className="text-gray-600">For:</span>
+          <div className="flex items-center">
+            <Users className="w-3 h-3 mr-1 text-blue-500" />
+            <span className="text-gray-800">{resort.suitableFor.join(', ')}</span>
+          </div>
+        </div>
+        <div>
+          <span className="text-gray-600">Lifts:</span>
+          <p className="text-gray-800">{resort.liftSystem}</p>
+        </div>
+        <div>
+          <span className="text-gray-600">Nightlife:</span>
+          <div className="flex items-center">
+            <Martini className="w-3 h-3 mr-1 text-blue-500" />
+            <span className="text-gray-800">{resort.nightlife}</span>
+          </div>
+        </div>
+        <div>
+          <span className="text-gray-600">Family:</span>
+          <p className="text-gray-800">{resort.familyFriendly ? 'Yes' : 'No'}</p>
+        </div>
       </div>
     </CardContent>
   </Card>
