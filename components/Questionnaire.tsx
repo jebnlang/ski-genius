@@ -15,7 +15,7 @@ import { countries } from "@/lib/countries-data"
 interface Answers {
   groupType: string
   childrenAges: string[]
-  skiOrSnowboard: string
+  sportType: string
   countries: string[]
   skiingLevels: string[]
   lessons: string
@@ -35,7 +35,7 @@ interface Answers {
 const defaultAnswers: Answers = {
   groupType: '',
   childrenAges: [],
-  skiOrSnowboard: '',
+  sportType: '',
   countries: [],
   skiingLevels: [],
   lessons: '',
@@ -66,40 +66,47 @@ const useQuestionnaireState = () => {
   const router = useRouter()
   const pathname = usePathname()
 
-  // Load saved state from localStorage on mount
+  // Load saved state from localStorage
   useEffect(() => {
-    try {
+    const loadSavedState = () => {
       const savedData = localStorage.getItem(STORAGE_KEY)
       if (savedData) {
-        const { answers: savedAnswers, currentStep } = JSON.parse(savedData) as StorageState
-        setAnswers(savedAnswers)
-        
-        // If we're on the base questionnaire URL, redirect to the last active step
-        if (pathname === '/questionnaire') {
-          const route = questionRoutes[currentStep as keyof typeof questionRoutes]
-          router.push(`/questionnaire/${route}`)
+        try {
+          const { answers: savedAnswers } = JSON.parse(savedData) as StorageState
+          setAnswers(savedAnswers)
+        } catch (error) {
+          console.error('Error loading saved questionnaire data:', error)
         }
+      } else {
+        // If no saved data, set default 'Anywhere' for countries
+        setAnswers(prev => ({
+          ...prev,
+          countries: ['Anywhere']
+        }))
       }
-    } catch (error) {
-      console.error('Error loading saved questionnaire data:', error)
     }
-  }, [pathname, router])
+
+    loadSavedState()
+  }, []) // Only run on mount
 
   const updateAnswers = (updates: Partial<Answers>) => {
     setAnswers(prevAnswers => {
-      const newAnswers = { ...prevAnswers, ...updates }
-      
-      // Save the updated state to localStorage
+      const newAnswers = { 
+        ...prevAnswers, 
+        ...updates,
+      };
+  
+      // Save to localStorage
       const storageData: StorageState = {
         answers: newAnswers,
         lastUpdated: new Date().toISOString(),
         currentStep: getCurrentStepFromPathname(pathname)
-      }
+      };
       
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
-      return newAnswers
-    })
-  }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData));
+      return newAnswers;
+    });
+  };
 
   return [answers, updateAnswers] as const
 }
@@ -166,94 +173,6 @@ const QuestionNav = ({ currentStep, totalSteps, setStep }: {
   );
 };
 
-const CountryAutocomplete = () => {
-  const [answers, updateAnswers] = useQuestionnaireState()
-
-  // Initialize with "Anywhere" if countries array is empty
-  useEffect(() => {
-    if (answers.countries.length === 0) {
-      updateAnswers({ countries: ["Anywhere"] })
-    }
-  }, [answers.countries.length, updateAnswers])
-
-  const handleSelect = (countryName: string) => {
-    let newCountries: string[]
-    
-    // If clicking Anywhere while it's already selected, do nothing
-    if (countryName === "Anywhere" && answers.countries.includes("Anywhere")) {
-      return
-    }
-
-    if (countryName === "Anywhere") {
-      newCountries = ["Anywhere"]
-    } else {
-      // Remove "Anywhere" and handle country selection
-      const currentSelection = answers.countries.filter(c => c !== "Anywhere")
-      
-      if (currentSelection.includes(countryName)) {
-        // Remove country if already selected
-        newCountries = currentSelection.filter(c => c !== countryName)
-      } else {
-        // Add new country
-        newCountries = [...currentSelection, countryName]
-      }
-
-      // If all countries were deselected, default back to "Anywhere"
-      if (newCountries.length === 0) {
-        newCountries = ["Anywhere"]
-      }
-    }
-
-    updateAnswers({ countries: newCountries })
-  }
-
-  // Filter out "Anywhere" from the countries list
-  const countryOptions = countries.filter(country => country.name !== "Anywhere")
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          key="anywhere"
-          variant={answers.countries.includes("Anywhere") ? "default" : "outline"}
-          className={cn(
-            "justify-start",
-            answers.countries.includes("Anywhere") && "bg-blue-500 text-white"
-          )}
-          onClick={() => handleSelect("Anywhere")}
-        >
-          <Check
-            className={cn(
-              "mr-2 h-4 w-4",
-              answers.countries.includes("Anywhere") ? "opacity-100" : "opacity-0"
-            )}
-          />
-          Anywhere
-        </Button>
-        {countryOptions.map((country) => (
-          <Button
-            key={country.id}
-            variant={answers.countries.includes(country.name) ? "default" : "outline"}
-            className={cn(
-              "justify-start",
-              answers.countries.includes(country.name) && "bg-blue-500 text-white"
-            )}
-            onClick={() => handleSelect(country.name)}
-          >
-            <Check
-              className={cn(
-                "mr-2 h-4 w-4",
-                answers.countries.includes(country.name) ? "opacity-100" : "opacity-0"
-              )}
-            />
-            {country.name}
-          </Button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 const questionRoutes = {
   1: 'group-type',
   2: 'ski-or-snowboard',
@@ -285,12 +204,20 @@ export default function Component() {
   
   // Update step management to work with URLs
   const [step, setStep] = useState(() => {
-    const route = pathname?.split('/').pop() // Add optional chaining
+    const route = pathname?.split('/').pop()
     return route ? routeToStep[route] || 1 : 1
   })
 
   // Modify setStep to update URL
   const handleSetStep = (newStep: number) => {
+    // Save current state before navigation
+    const storageData: StorageState = {
+      answers: answers, // Use the current state
+      lastUpdated: new Date().toISOString(),
+      currentStep: newStep // Use new step number
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
+    
     const route = questionRoutes[newStep as keyof typeof questionRoutes]
     if (route) {
       router.push(`/questionnaire/${route}`)
@@ -303,7 +230,7 @@ export default function Component() {
   const isQuestionAnswered = () => {
     switch (step) {
       case 1: return !!answers.groupType
-      case 2: return !!answers.skiOrSnowboard
+      case 2: return !!answers.sportType
       case 3: return answers.countries && answers.countries.length > 0 && answers.countries[0] !== ''
       case 4: return answers.skiingLevels.length > 0
       case 5: return answers.slopePreferences.length > 0
@@ -323,25 +250,17 @@ export default function Component() {
 
   const handleNext = () => {
     if (step < totalSteps) {
-      // Save current progress to localStorage
+      // Save current state before navigation
       const storageData: StorageState = {
-        answers,
+        answers: answers, // Use the current state
         lastUpdated: new Date().toISOString(),
-        currentStep: step
+        currentStep: step + 1
       }
-      localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
       
       handleSetStep(step + 1)
     } else {
-      // Save final answers before navigating to results
-      const storageData: StorageState = {
-        answers,
-        lastUpdated: new Date().toISOString(),
-        currentStep: step
-      }
-      localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
-      
-      // Navigate to results page
+      // Final step - navigate to results
       router.push('/results')
     }
   }
@@ -396,7 +315,7 @@ export default function Component() {
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Are you skiers or snowboarders?</h2>
-            <RadioGroup value={answers.skiOrSnowboard} onValueChange={(value) => updateAnswers({ skiOrSnowboard: value })}>
+            <RadioGroup value={answers.sportType} onValueChange={(value) => updateAnswers({ sportType: value })}>
               {['Skiers', 'Snowboarders', 'Mixed'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
@@ -409,8 +328,63 @@ export default function Component() {
       case 3:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Where would you like to ski? Pick any countries you like!</h2>
-            <CountryAutocomplete />
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Where would you like to ski?</h2>
+            <div className="space-y-2">
+              {[
+                'Anywhere',
+                'France',
+                'Austria',
+                'Switzerland',
+                'Italy',
+                'Germany',
+                'Norway',
+                'Sweden',
+                'Spain',
+                'Bulgaria',
+                'Slovenia',
+                'Czech Republic',
+                'Poland',
+                'Finland',
+                'Andorra'
+              ].map((country) => (
+                <div key={country} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={country}
+                    checked={answers.countries.includes(country)}
+                    onCheckedChange={(checked) => {
+                      let newCountries: string[];
+                      if (country === 'Anywhere') {
+                        // If selecting "Anywhere", clear other selections
+                        newCountries = checked ? ['Anywhere'] : [];
+                      } else {
+                        if (checked) {
+                          // Remove "Anywhere" if it exists and add the new country
+                          newCountries = [
+                            ...answers.countries.filter(c => c !== 'Anywhere'),
+                            country
+                          ];
+                        } else {
+                          // Remove the country
+                          newCountries = answers.countries.filter(c => c !== country);
+                          // If no countries left, set to "Anywhere"
+                          if (newCountries.length === 0) {
+                            newCountries = ['Anywhere'];
+                          }
+                        }
+                      }
+                      updateAnswers({ countries: newCountries });
+                    }}
+                    className="border-blue-500 text-blue-500"
+                  />
+                  <Label 
+                    htmlFor={country} 
+                    className="text-gray-800 hover:text-blue-500 transition-colors"
+                  >
+                    {country}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
         )
       case 4:
@@ -638,6 +612,11 @@ export default function Component() {
         return null
     }
   }
+
+  useEffect(() => {
+    const savedData = localStorage.getItem(STORAGE_KEY)
+    console.log('Current localStorage data:', savedData ? JSON.parse(savedData) : null)
+  }, [pathname]) // Log whenever pathname changes
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden">
