@@ -4,20 +4,45 @@
 
 import { useState, useEffect } from 'react'
 import { useCompletion } from 'ai/react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Snowflake, Users, Mountain, Martini, MapPin } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useSearchParams } from 'next/navigation'
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { Snowflake, Users, Mountain, Martini, MapPin } from 'lucide-react'
 import { supabase } from '@/utils/supabase'
+import { PostgrestError } from '@supabase/supabase-js'
+
+// Define all necessary types
+interface StorageState {
+  answers: {
+    groupType: string
+    childrenAges: string[]
+    sportType: string
+    countries: string[]
+    skiingLevels: string[]
+    lessons: string
+    nightlife: string
+    snowPark: string
+    offPiste: string
+    skiInSkiOut: string
+    resortPreferences: string[]
+    slopePreferences: string[]
+    otherActivities: string[]
+    lovedResorts: string
+    travelTime: string
+    travelMonth: string[]
+    additionalInfo: string
+  }
+  lastUpdated: string
+  currentStep: number
+}
 
 interface Resort {
+  snow_condition: any
   name: string
   location: string
   country: string
-  matchPercentage: number
   difficulty: {
     easy: number
     intermediate: number
@@ -28,21 +53,11 @@ interface Resort {
     intermediate: number
     advanced: number
   }
-  snowCondition: string
-  suitableFor: string[]
   skiArea: string
-  liftSystem: string
-  nightlife: string
-  familyFriendly: boolean
-  snowPark: boolean
-  offPiste: boolean
-  skiInSkiOut: boolean
-  nearestAirport: string
-  transferTime: string
-  altitude: string
-  seasonDates: string
-  terrainTypes: string[]
-  additionalActivities: string[]
+  numberOfLifts: number
+  villageAltitude: string
+  skiRange: string
+  nightlife: "Vibrant" | "Moderate" | "Quiet"
   highlights: string[]
   explanation?: string
 }
@@ -97,9 +112,7 @@ const DifficultyBar = ({ difficulty, runs }: { difficulty: Resort['difficulty'],
 
 const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
   <Card className="bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
-    transition-all duration-300 
-    hover:scale-105 hover:shadow-xl hover:z-10 
-    group/card">
+    transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10">
     <CardHeader className="p-4 pb-2">
       <div className="flex justify-between items-start">
         <div>
@@ -109,7 +122,9 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
             {resort.location}, {resort.country}
           </div>
         </div>
-        <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">{rank}</Badge>
+        <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
+          {rank}
+        </Badge>
       </div>
       
       <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
@@ -128,33 +143,28 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
         <p className="text-sm text-gray-700 italic mt-3">{resort.explanation}</p>
       )}
     </CardHeader>
+
     <CardContent className="p-4 pt-2">
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div className="col-span-2">
           <span className="text-gray-600">Slope Distribution:</span>
           <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
         </div>
-        <div className="col-span-2">
-          <span className="text-gray-600">Ski Area:</span>
+        <div>
+          <span className="text-gray-600">Km of Runs:</span>
           <p className="text-gray-800">{resort.skiArea}</p>
         </div>
         <div>
-          <span className="text-gray-600">Snow:</span>
-          <div className="flex items-center">
-            <Snowflake className="w-3 h-3 mr-1 text-blue-500" />
-            <span className="text-gray-800">{resort.snowCondition}</span>
-          </div>
+          <span className="text-gray-600">Number of Lifts:</span>
+          <p className="text-gray-800">{resort.numberOfLifts}</p>
         </div>
         <div>
-          <span className="text-gray-600">For:</span>
-          <div className="flex items-center">
-            <Users className="w-3 h-3 mr-1 text-blue-500" />
-            <span className="text-gray-800">{resort.suitableFor.join(', ')}</span>
-          </div>
+          <span className="text-gray-600">Village Altitude:</span>
+          <p className="text-gray-800">{resort.villageAltitude}</p>
         </div>
         <div>
-          <span className="text-gray-600">Lifts:</span>
-          <p className="text-gray-800">{resort.liftSystem}</p>
+          <span className="text-gray-600">Ski Range:</span>
+          <p className="text-gray-800">{resort.skiRange}</p>
         </div>
         <div>
           <span className="text-gray-600">Nightlife:</span>
@@ -163,21 +173,15 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
             <span className="text-gray-800">{resort.nightlife}</span>
           </div>
         </div>
-        <div>
-          <span className="text-gray-600">Family:</span>
-          <p className="text-gray-800">{resort.familyFriendly ? 'Yes' : 'No'}</p>
-        </div>
       </div>
     </CardContent>
   </Card>
 )
-
 const mockResorts: Resort[] = [
   {
     name: "Chamonix",
-    location: "French Alps",
+    location: "French Alps", 
     country: "France",
-    matchPercentage: 95,
     difficulty: {
       easy: 20,
       intermediate: 40,
@@ -188,135 +192,179 @@ const mockResorts: Resort[] = [
       intermediate: 20,
       advanced: 20
     },
-    snowCondition: "Excellent",
-    suitableFor: ["Advanced Skiers", "Off-Piste Enthusiasts"],
-    skiArea: "170km of pistes",
-    liftSystem: "Modern, high-speed lifts",
+    skiArea: "170 km",
+    numberOfLifts: 49,
+    villageAltitude: "1,035 m",
+    skiRange: "1,035 m - 3,842 m",
     nightlife: "Vibrant",
-    familyFriendly: false,
-    snowPark: true,
-    offPiste: true,
-    skiInSkiOut: false,
-    nearestAirport: "Geneva Airport",
-    transferTime: "1 hour",
-    altitude: "1,035m - 3,842m",
-    seasonDates: "December to May",
-    terrainTypes: ["Glaciers", "Steep Slopes", "Off-Piste"],
-    additionalActivities: ["Paragliding", "Ice Climbing"],
-    highlights: ["World-renowned off-piste skiing", "Breathtaking Mont Blanc views", "Challenging terrain for experts"],
-    explanation: "Perfect match for advanced skiers seeking challenging terrain, with extensive off-piste options and proximity to Geneva airport.",
+    highlights: [
+      "World-renowned off-piste skiing",
+      "Breathtaking Mont Blanc views", 
+      "Challenging terrain for experts"
+    ],
+    explanation: "Perfect match for advanced skiers seeking challenging terrain and vibrant atmosphere.",
+    snow_condition: "Powder"
   },
   {
     name: "Zermatt",
     location: "Swiss Alps",
-    country: "Switzerland",
-    matchPercentage: 88,
+    country: "Switzerland", 
     difficulty: {
       easy: 25,
       intermediate: 50,
       advanced: 25
     },
     runs: {
-      easy: 25,
-      intermediate: 50,
-      advanced: 25
+      easy: 15,
+      intermediate: 25,
+      advanced: 10
     },
-    snowCondition: "Very Good",
-    suitableFor: ["Intermediate Skiers", "Luxury Seekers"],
-    skiArea: "360km of pistes",
-    liftSystem: "State-of-the-art lifts",
+    skiArea: "360 km",
+    numberOfLifts: 52,
+    villageAltitude: "1,620 m",
+    skiRange: "1,620 m - 3,883 m",
     nightlife: "Moderate",
-    familyFriendly: true,
-    snowPark: true,
-    offPiste: true,
-    skiInSkiOut: true,
-    nearestAirport: "Zurich Airport",
-    transferTime: "3.5 hours",
-    altitude: "1,620m - 3,883m",
-    seasonDates: "November to April",
-    terrainTypes: ["Groomed Runs", "Glacier Skiing"],
-    additionalActivities: ["Snowshoeing", "Gourmet Dining"],
-    highlights: ["Car-free village", "Iconic Matterhorn views", "Year-round skiing on glaciers"],
-    explanation: "Ideal for intermediate skiers looking for a luxury experience, with guaranteed snow conditions and spectacular mountain views.",
+    highlights: [
+      "Year-round skiing",
+      "Car-free village",
+      "Views of the Matterhorn"
+    ],
+    explanation: "Great for intermediate skiers with stunning views and charming atmosphere.",
+    snow_condition: "Groomed"
   },
   {
-    name: "St. Anton",
-    location: "Tyrol",
-    country: "Austria",
-    matchPercentage: 82,
+    name: "St. Moritz",
+    location: "Swiss Alps",
+    country: "Switzerland",
     difficulty: {
-      easy: 10,
-      intermediate: 40,
-      advanced: 50
-    },
-    runs: {
-      easy: 5,
-      intermediate: 20,
+      easy: 30,
+      intermediate: 45,
       advanced: 25
     },
-    snowCondition: "Good",
-    suitableFor: ["Advanced Skiers", "Party Lovers"],
-    skiArea: "305km of pistes",
-    liftSystem: "Efficient lift network",
+    runs: {
+      easy: 20,
+      intermediate: 30,
+      advanced: 15
+    },
+    skiArea: "350 km",
+    numberOfLifts: 58,
+    villageAltitude: "1,822 m",
+    skiRange: "1,822 m - 3,303 m",
     nightlife: "Vibrant",
-    familyFriendly: false,
-    snowPark: true,
-    offPiste: true,
-    skiInSkiOut: false,
-    nearestAirport: "Innsbruck Airport",
-    transferTime: "1.5 hours",
-    altitude: "1,304m - 2,811m",
-    seasonDates: "December to April",
-    terrainTypes: ["Powder Bowls", "Steep Chutes"],
-    additionalActivities: ["Apres-Ski", "Tobogganing"],
-    highlights: ["Legendary apres-ski scene", "Extensive Arlberg ski area", "Challenging off-piste terrain"],
-    explanation: "Selected for its combination of challenging slopes and vibrant nightlife, making it perfect for advanced skiers who enjoy après-ski.",
+    highlights: [
+      "Luxury shopping",
+      "Winter sports events",
+      "Sunny climate"
+    ],
+    explanation: "Luxury resort perfect for those seeking both great skiing and upscale amenities.",
+    snow_condition: "Packed"
   }
 ]
 
-// Add a validation function to check if resorts match selected countries
-const validateResorts = (resorts: Resort[], selectedCountries: string[]) => {
-  // If "Anywhere" is selected, accept all resorts
+// Validation function to check if resorts match selected countries
+const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort[] => {
+  if (!Array.isArray(resorts)) {
+    throw new Error('Invalid resort data received')
+  }
+
+  // Basic data validation
+  const isValidResort = (resort: Resort): boolean => {
+    return (
+      typeof resort.name === 'string' &&
+      typeof resort.location === 'string' &&
+      typeof resort.country === 'string' &&
+      typeof resort.difficulty === 'object' &&
+      typeof resort.runs === 'object' &&
+      typeof resort.skiArea === 'string' &&
+      typeof resort.numberOfLifts === 'number' &&
+      typeof resort.villageAltitude === 'string' &&
+      typeof resort.skiRange === 'string' &&
+      Array.isArray(resort.highlights) &&
+      ['Vibrant', 'Moderate', 'Quiet'].includes(resort.nightlife)
+    )
+  }
+
+  // Filter out invalid resorts
+  const validResorts = resorts.filter(isValidResort)
+
+  if (validResorts.length === 0) {
+    throw new Error('No valid resort data found')
+  }
+
+  // If "Anywhere" is selected, return all valid resorts
   if (selectedCountries.includes("Anywhere")) {
-    return resorts;
+    return validResorts
   }
 
-  // Filter resorts to only include those from selected countries
-  const validResorts = resorts.filter(resort => 
+  // Filter resorts by selected countries
+  const countryMatchedResorts = validResorts.filter(resort => 
     selectedCountries.includes(resort.country)
-  );
+  )
 
-  // If we don't have enough valid resorts, log an error
-  if (validResorts.length < resorts.length) {
-    console.error('Some resorts did not match selected countries');
+  if (countryMatchedResorts.length === 0) {
+    throw new Error('No resorts found in selected countries')
   }
 
-  return validResorts;
-};
+  return countryMatchedResorts
+}
 
-// Add this interface to match the storage structure
-interface StorageState {
-  answers: {
-    groupType: string
-    childrenAges: string[]
-    sportType: string
-    countries: string[]
-    skiingLevels: string[]
-    lessons: string
-    nightlife: string
-    snowPark: string
-    offPiste: string
-    skiInSkiOut: string
-    resortPreferences: string[]
-    slopePreferences: string[]
-    otherActivities: string[]
-    lovedResorts: string
-    travelTime: string
-    travelMonth: string[]
-    additionalInfo: string
-  }
-  lastUpdated: string
-  currentStep: number
+// API prompt construction
+const constructPrompt = (answers: StorageState['answers']): string => {
+  return `Based on the following user preferences from the questionnaire:
+- Group type: ${answers.groupType}
+- Children ages: ${answers.childrenAges?.join(', ') || 'N/A'}
+- Ski or snowboard: ${answers.sportType}
+- Desired countries: ${answers.countries?.join(', ') || 'Anywhere'}
+- Skiing levels: ${answers.skiingLevels?.join(', ')}
+- Resort size preference: ${answers.slopePreferences?.join(', ')}
+- Lessons needed: ${answers.lessons}
+- Nightlife importance: ${answers.nightlife}
+- Snow park importance: ${answers.snowPark}
+- Off-piste importance: ${answers.offPiste}
+- Ski-in/ski-out preference: ${answers.skiInSkiOut}
+- Resort preferences: ${answers.resortPreferences?.join(', ')}
+- Other activities: ${answers.otherActivities?.join(', ')}
+- Loved resorts: ${answers.lovedResorts}
+- Travel time: ${answers.travelTime}
+- Travel month: ${answers.travelMonth?.join(', ') || 'Flexible'}
+- Additional info: ${answers.additionalInfo}
+
+CRITICAL REQUIREMENTS:
+1. COUNTRY RESTRICTION: You must ONLY suggest resorts from these countries: ${answers.countries?.join(', ')}
+   If "Anywhere" is selected, you may suggest resorts from any European country.
+   Under no circumstances suggest resorts from countries that weren't selected.
+
+2. SIMILAR TO LOVED RESORTS: The user loved these resorts: ${answers.lovedResorts}
+   If the user specified any loved resorts, at least one recommendation should have similar characteristics.
+
+3. DIVERSE SUGGESTIONS: While one recommendation can be a well-known resort, at least one recommendation 
+   should be a hidden gem or lesser-known resort that matches their preferences.
+
+Suggest 3 ski resorts that best match these preferences. For each resort, provide ONLY the following details in JSON format:
+{
+  "name": "Resort Name",
+  "location": "Specific Region/Area",
+  "country": "Country Name",
+  "difficulty": {
+    "easy": percentage,
+    "intermediate": percentage,
+    "advanced": percentage
+  },
+  "runs": {
+    "easy": number,
+    "intermediate": number,
+    "advanced": number
+  },
+  "skiArea": "XXX km",
+  "numberOfLifts": number,
+  "villageAltitude": "XXXX m",
+  "skiRange": "XXXX m - YYYY m",
+  "nightlife": "Vibrant|Moderate|Quiet",
+  "highlights": ["highlight1", "highlight2", "highlight3"],
+  "explanation": "1-2 sentences explaining why this resort matches"
+}
+
+Respond with a JSON array of exactly 3 resort objects.`
 }
 
 const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[]) => {
@@ -346,38 +394,25 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
       .select()
 
     if (questionnaireError) {
-      console.error('Error saving questionnaire:', questionnaireError)
-      return
+      throw new Error(`Error saving questionnaire: ${questionnaireError.details || questionnaireError.message}`)
     }
 
-    // Then, save each resort recommendation
+    // Then, save each resort recommendation with only the data we're using
     const questionnaireId = questionnaireData[0].id
-    const resortsToInsert = resorts.map((resort, index) => ({
+    const resortsToInsert = resorts.map((resort) => ({
       questionnaire_id: questionnaireId,
       name: resort.name,
       location: resort.location,
       country: resort.country,
-      match_rank: index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick',
       difficulty: resort.difficulty,
       runs: resort.runs,
-      snow_condition: resort.snowCondition,
-      suitable_for: resort.suitableFor,
       ski_area: resort.skiArea,
-      lift_system: resort.liftSystem,
+      number_of_lifts: resort.numberOfLifts,
+      village_altitude: resort.villageAltitude,
+      ski_range: resort.skiRange,
       nightlife: resort.nightlife,
-      family_friendly: resort.familyFriendly,
-      snow_park: resort.snowPark,
-      off_piste: resort.offPiste,
-      ski_in_ski_out: resort.skiInSkiOut,
-      nearest_airport: resort.nearestAirport,
-      transfer_time: resort.transferTime,
-      altitude: resort.altitude,
-      season_dates: resort.seasonDates,
-      terrain_types: resort.terrainTypes,
-      additional_activities: resort.additionalActivities,
       highlights: resort.highlights,
-      explanation: resort.explanation,
-      image_url: '/placeholder.svg'
+      explanation: resort.explanation
     }))
 
     const { error: resortsError } = await supabase
@@ -385,10 +420,16 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
       .insert(resortsToInsert)
 
     if (resortsError) {
-      console.error('Error saving resorts:', resortsError)
+      throw new Error(`Error saving resorts: ${resortsError.details || resortsError.message}`)
     }
   } catch (error) {
-    console.error('Error in saveToDatabase:', error)
+    // Log the error and rethrow it
+    if (error instanceof Error) {
+      console.log('Database error:', error.message)
+    } else {
+      console.log('Unknown database error occurred')
+    }
+    throw error
   }
 }
 
@@ -408,7 +449,6 @@ export default function ResultsPage() {
         // Check for localStorage data
         const savedData = localStorage.getItem('ski_questionnaire_data')
         if (!savedData) {
-          // If no data found, redirect to questionnaire
           router.push('/questionnaire')
           return
         }
@@ -417,120 +457,57 @@ export default function ResultsPage() {
         try {
           parsedData = JSON.parse(savedData)
         } catch (e) {
-          console.error('Error parsing stored data:', e)
+          setError('Error loading your preferences. Please try again.')
           router.push('/questionnaire')
           return
         }
 
         const { answers } = parsedData
 
-        // Use mock data if something goes wrong with the API
         try {
-          const prompt = `Based on the following user preferences from the questionnaire:
-          - Group type: ${answers.groupType}
-          - Children ages: ${answers.childrenAges?.join(', ') || 'N/A'}
-          - Ski or snowboard: ${answers.sportType}
-          - Desired countries: ${answers.countries?.join(', ') || 'Anywhere'}
-          - Skiing levels: ${answers.skiingLevels?.join(', ')}
-          - Resort size preference: ${answers.slopePreferences?.join(', ')}
-          - Lessons needed: ${answers.lessons}
-          - Nightlife importance: ${answers.nightlife}
-          - Snow park importance: ${answers.snowPark}
-          - Off-piste importance: ${answers.offPiste}
-          - Ski-in/ski-out preference: ${answers.skiInSkiOut}
-          - Resort preferences: ${answers.resortPreferences?.join(', ')}
-          - Other activities: ${answers.otherActivities?.join(', ')}
-          - Loved resorts: ${answers.lovedResorts}
-          - Travel time: ${answers.travelTime}
-          - Travel month: ${answers.travelMonth?.join(', ') || 'Flexible'}
-          - Additional info: ${answers.additionalInfo}
-
-          CRITICAL REQUIREMENTS:
-          1. COUNTRY RESTRICTION: You must ONLY suggest resorts from these countries: ${answers.countries?.join(', ')}
-             If "Anywhere" is selected, you may suggest resorts from any European country.
-             Under no circumstances suggest resorts from countries that weren't selected.
-
-          2. SIMILAR TO LOVED RESORTS: The user loved these resorts: ${answers.lovedResorts}
-             If the user specified any loved resorts, at least one recommendation should have similar characteristics 
-             (terrain type, atmosphere, size) to their loved resorts.
-
-          3. DIVERSE SUGGESTIONS: While one recommendation can be a well-known resort, at least one recommendation 
-             should be a hidden gem or lesser-known resort that matches their preferences. Look for unique, 
-             off-the-beaten-path destinations that tourists might not typically consider but would love to discover.
-
-          Suggest 3 ski resorts that best match these preferences. The resorts should be in Europe and closely align 
-          with the user's input. For each resort, provide the following details:
-
-          - name
-          - location
-          - country
-          - difficulty (object with easy, intermediate, advanced percentages)
-          - runs (object with easy, intermediate, advanced number of runs)
-          - snowCondition (Excellent, Very Good, or Good)
-          - suitableFor (array of group types, e.g., ["Families", "Couples"])
-          - skiArea (e.g., "200km of pistes")
-          - liftSystem (e.g., "Modern, high-speed lifts")
-          - nightlife (Vibrant, Moderate, or Quiet)
-          - familyFriendly (boolean)
-          - snowPark (boolean)
-          - offPiste (boolean)
-          - skiInSkiOut (boolean)
-          - nearestAirport
-          - transferTime
-          - altitude (e.g., "1500m - 3000m")
-          - seasonDates (e.g., "December to April")
-          - terrainTypes (array of 2-3 terrain types that match the user's preferences)
-          - additionalActivities (array of 2-3 activities that match the user's preferences)
-          - highlights (array of 3 short phrases based on the resort's features that align with the user's preferences)
-          - explanation (1-2 sentences explaining why this resort was chosen based on the user's specific preferences)
-
-          Ensure that each resort recommendation directly addresses the user's preferences, including:
-          - Matching the desired countries
-          - Suitable for the specified group type and children ages (if applicable)
-          - Appropriate for the indicated skiing levels
-          - Matching the preferred resort size (small and charming, medium-sized, or large ski area)
-          - Aligning with the importance placed on nightlife, snow parks, and off-piste skiing
-          - Meeting the ski-in/ski-out preference
-          - Offering the preferred resort characteristics (from their top 3 choices)
-          - Providing opportunities for the desired additional activities
-          - Being available and suitable for the specified travel time and month(s)
-
-          Consider the additional information provided by the user to further refine the recommendations.
-
-          Respond with a JSON array of 3 resort objects that best match the user's preferences.`
+          const completion = await complete(constructPrompt(answers))
           
-          const completion = await complete(prompt)
-          
-          // Remove any backticks and "json" tag that might be in the response
           const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
           
-          let parsedResorts
+          let parsedResorts: Resort[]
           try {
             parsedResorts = JSON.parse(cleanedCompletion)
           } catch (parseError) {
-            console.error('Error parsing JSON:', parseError)
-            console.log('Received data:', cleanedCompletion)
-            throw new Error('Invalid JSON received from AI completion')
+            console.error('Error parsing AI response:', parseError)
+            throw new Error('Unable to process resort recommendations')
           }
           
-          if (Array.isArray(parsedResorts) && parsedResorts.length > 0) {
-            // Validate that resorts match selected countries
-            const validatedResorts = validateResorts(parsedResorts, answers.countries)
-            
-            if (validatedResorts.length > 0) {
-              setResorts(validatedResorts)
-              await saveToDatabase(answers, validatedResorts)
-            } else {
-              throw new Error('No resorts match selected countries')
-            }
-          } else {
-            throw new Error('No valid resort data received')
+          // Validate resort data
+          if (!Array.isArray(parsedResorts) || parsedResorts.length === 0) {
+            throw new Error('No resort recommendations received')
           }
+
+          // Validate that resorts match selected countries
+          const validatedResorts = validateResorts(parsedResorts, answers.countries)
+          
+          if (validatedResorts.length === 0) {
+            throw new Error('No resorts match your selected countries')
+          }
+
+          setResorts(validatedResorts)
+          
+          // Save to database
+          try {
+            await saveToDatabase(answers, validatedResorts)
+          } catch (dbError) {
+            console.error('Database error:', dbError)
+            // Don't throw here - we still want to show results even if save fails
+          }
+
         } catch (apiError) {
           console.error('API Error:', apiError)
-          // Fall back to mock data
-          const validatedMockResorts = validateResorts(mockResorts, answers.countries)
-          setResorts(validatedMockResorts)
+          setError('Unable to get resort recommendations. Please try again.')
+          
+          // Only use mock data in development
+          if (process.env.NODE_ENV === 'development') {
+            const validatedMockResorts = validateResorts(mockResorts, answers.countries)
+            setResorts(validatedMockResorts)
+          }
         }
       } finally {
         setIsLoading(false)
@@ -540,9 +517,7 @@ export default function ResultsPage() {
     fetchResults()
   }, [complete, router])
 
-  // Don't clear localStorage immediately - maybe clear it after successful API call
-  // or let it persist for a while in case user wants to go back
-
+  // Improved loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden">
@@ -551,11 +526,31 @@ export default function ResultsPage() {
         <div className="bg-white bg-opacity-40 p-8 rounded-lg shadow-lg max-w-2xl w-full border border-white backdrop-blur-md relative z-10 text-center">
           <h1 className="text-3xl font-bold mb-4 text-gray-800">Finding Your Perfect Ski Destinations</h1>
           <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Analyzing your preferences...</p>
         </div>
       </div>
     )
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden p-4">
+        <div className="bg-white bg-opacity-40 p-8 rounded-lg shadow-lg max-w-2xl w-full border border-white backdrop-blur-md text-center">
+          <h1 className="text-3xl font-bold mb-4 text-gray-800">Oops!</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button 
+            onClick={() => router.push('/questionnaire')}
+            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Main content
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
       <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
@@ -565,15 +560,10 @@ export default function ResultsPage() {
           <h1 className="text-4xl font-bold text-gray-800 mb-4">Your Perfect Ski Destinations</h1>
           <p className="text-gray-600">Based on your preferences, we&apos;ve found these amazing matches</p>
         </div>
-        {error && (
-          <div className="bg-white bg-opacity-40 backdrop-blur-md rounded-lg p-4 mb-8 text-center border border-white">
-            <p className="text-red-500">{error}</p>
-          </div>
-        )}
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 relative group">
           {resorts.map((resort, index) => (
-            <div key={index} className="transition-all duration-300 group-hover:opacity-50 hover:!opacity-100 hover:scale-105 hover:shadow-xl hover:z-10">
+            <div key={index} className="transition-all duration-300 group-hover:opacity-50 hover:!opacity-100">
               <ResortCard 
                 resort={resort} 
                 rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} 
