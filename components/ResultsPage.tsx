@@ -96,7 +96,10 @@ const DifficultyBar = ({ difficulty, runs }: { difficulty: Resort['difficulty'],
 )
 
 const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
-  <Card className="bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 hover:bg-opacity-50 transition-all duration-200">
+  <Card className="bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
+    transition-all duration-300 
+    hover:scale-105 hover:shadow-xl hover:z-10 
+    group/card">
     <CardHeader className="p-4 pb-2">
       <div className="flex justify-between items-start">
         <div>
@@ -568,13 +571,14 @@ export default function ResultsPage() {
           </div>
         )}
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 relative group">
           {resorts.map((resort, index) => (
-            <ResortCard 
-              key={index} 
-              resort={resort} 
-              rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} 
-            />
+            <div key={index} className="transition-all duration-300 group-hover:opacity-50 hover:!opacity-100 hover:scale-105 hover:shadow-xl hover:z-10">
+              <ResortCard 
+                resort={resort} 
+                rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} 
+              />
+            </div>
           ))}
         </div>
       </div>
