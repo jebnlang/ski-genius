@@ -454,7 +454,29 @@ export default function Component() {
       case 8:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Is having a snow park important?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+              Is having a snow park important?
+              <div className="relative inline-block">
+                <div className="cursor-help group">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor"
+                  >
+                    <path 
+                      fillRule="evenodd" 
+                      d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z"
+                      clipRule="evenodd" 
+                    />
+                  </svg>
+                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900/80 text-white text-sm rounded-lg w-64 text-center z-50">
+                    A snow park is an area with jumps, rails, and other features for tricks.
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-900/80 transform rotate-45"></div>
+                  </div>
+                </div>
+              </div>
+            </h2>
             <RadioGroup value={answers.snowPark} onValueChange={(value) => updateAnswers({ snowPark: value })}>
               {['Very important', 'Somewhat important', 'Not important'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
@@ -468,7 +490,29 @@ export default function Component() {
       case 9:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">How important is having off-piste possibilities?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">
+              How important is having off-piste possibilities?
+              <span className="inline-block relative ml-1">
+                <div className="cursor-help group">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor"
+                  >
+                    <path 
+                      fillRule="evenodd" 
+                      d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z"
+                      clipRule="evenodd" 
+                    />
+                  </svg>
+                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900/80 text-white text-sm rounded-lg w-64 text-center z-50">
+                    Off-piste refers to skiing or snowboarding on unmarked, ungroomed slopes outside the regular trails.
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-900/80 transform rotate-45"></div>
+                  </div>
+                </div>
+              </span>
+            </h2>
             <RadioGroup value={answers.offPiste} onValueChange={(value) => updateAnswers({ offPiste: value })}>
               {['Very important', 'Somewhat important', 'Not important'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
@@ -482,7 +526,29 @@ export default function Component() {
       case 10:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Do you prefer ski-in/ski-out resorts?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">
+              Do you prefer ski-in/ski-out resorts?
+              <span className="inline-block relative ml-1">
+                <div className="cursor-help group">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor"
+                  >
+                    <path 
+                      fillRule="evenodd" 
+                      d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z"
+                      clipRule="evenodd" 
+                    />
+                  </svg>
+                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900/80 text-white text-sm rounded-lg w-64 text-center z-50">
+                    Ski-in/ski-out resorts offer direct access to the slopes from your accommodation, so you can ski right to and from your door.
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-900/80 transform rotate-45"></div>
+                  </div>
+                </div>
+              </span>
+            </h2>
             <RadioGroup value={answers.skiInSkiOut} onValueChange={(value) => updateAnswers({ skiInSkiOut: value })}>
               {['Yes, must have', 'Nice to have', "Don't care"].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
@@ -522,7 +588,7 @@ export default function Component() {
       case 12:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Besides skiing, what other activities would you like to try?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">What other activities would you like to try?</h2>
             <div className="space-y-2">
               {["Spa/wellness facilities", "Great food scene", "Cross-country skiing", "Winter hiking", "Heli Skiing", "Cat skiing", "Ski touring", "Night skiing", "Sledding/Toboganning"].map((activity) => (
                 <div key={activity} className="flex items-center space-x-2">
