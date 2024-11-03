@@ -341,7 +341,8 @@ export default function Component() {
                 'Czech Republic',
                 'Poland',
                 'Finland',
-                'Andorra'
+                'Andorra',
+                'Greece'
               ].map((country) => (
                 <div key={country} className="flex items-center space-x-2">
                   <Checkbox
