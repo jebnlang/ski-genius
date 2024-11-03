@@ -325,7 +325,7 @@ export default function Component() {
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Where would you like to ski?</h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 'Anywhere',
                 'France',
@@ -351,19 +351,15 @@ export default function Component() {
                     onCheckedChange={(checked) => {
                       let newCountries: string[];
                       if (country === 'Anywhere') {
-                        // If selecting "Anywhere", clear other selections
                         newCountries = checked ? ['Anywhere'] : [];
                       } else {
                         if (checked) {
-                          // Remove "Anywhere" if it exists and add the new country
                           newCountries = [
                             ...answers.countries.filter(c => c !== 'Anywhere'),
                             country
                           ];
                         } else {
-                          // Remove the country
                           newCountries = answers.countries.filter(c => c !== country);
-                          // If no countries left, set to "Anywhere"
                           if (newCountries.length === 0) {
                             newCountries = ['Anywhere'];
                           }
