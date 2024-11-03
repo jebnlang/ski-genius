@@ -9,7 +9,7 @@ import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Snowflake, Users, Mountain, Martini, MapPin } from 'lucide-react'
+import { Snowflake, Users, Mountain, Martini, MapPin, X } from 'lucide-react'
 import { supabase } from '@/utils/supabase'
 import { PostgrestError } from '@supabase/supabase-js'
 
@@ -116,21 +116,38 @@ const DifficultyBar = ({ difficulty, runs }: { difficulty: Resort['difficulty'],
   </TooltipProvider>
 )
 
-const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
-  <Card className="bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
+const LoadingCard = () => (
+  <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
+    transition-all duration-300 min-h-[600px] flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+      <p className="mt-4 text-gray-600">Finding new resort...</p>
+    </div>
+  </Card>
+)
+
+const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => (
+  <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
     transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10">
+    <button 
+      onClick={onRemove}
+      className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 
+        transition-colors z-20"
+    >
+      <X className="w-4 h-4 text-gray-600" />
+    </button>
     <CardHeader className="p-4 pb-2">
       <div className="flex justify-between items-start">
-        <div>
+        <div className="flex items-start gap-2 flex-1">
           <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
-          <div className="flex items-center text-sm text-gray-600 mt-1">
-            <MapPin className="w-3 h-3 mr-1" /> 
-            {resort.location}, {resort.country}
-          </div>
+          <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
+            {rank}
+          </Badge>
         </div>
-        <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
-          {rank}
-        </Badge>
+      </div>
+      <div className="flex items-center text-sm text-gray-600 mt-1">
+        <MapPin className="w-3 h-3 mr-1" /> 
+        {resort.location}, {resort.country}
       </div>
       
       <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
@@ -476,6 +493,8 @@ export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [loadingCards, setLoadingCards] = useState<{ [key: number]: boolean }>({})
+  const [seenResorts, setSeenResorts] = useState<Set<string>>(new Set())
   const router = useRouter()
 
   const { complete } = useCompletion({
@@ -556,6 +575,52 @@ export default function ResultsPage() {
     fetchResults()
   }, [complete, router])
 
+  const handleRemoveResort = async (index: number) => {
+    try {
+      setLoadingCards(prev => ({ ...prev, [index]: true }))
+      
+      // Get the current resort names to exclude
+      const currentResortNames = resorts.map(r => r.name)
+      
+      // Add current resort to seen resorts
+      setSeenResorts(prev => new Set([...prev, resorts[index].name]))
+      
+      // Get saved data for API call
+      const savedData = localStorage.getItem('ski_questionnaire_data')
+      if (!savedData) throw new Error('No saved preferences found')
+      
+      const { answers } = JSON.parse(savedData) as StorageState
+      
+      // Modify the prompt to exclude seen resorts
+      const excludeList = [...seenResorts, ...currentResortNames].join(', ')
+      const modifiedPrompt = constructPrompt(answers) + `\nIMPORTANT: Do NOT suggest any of these resorts: ${excludeList}`
+      
+      // Get new resort recommendation
+      const completion = await complete(modifiedPrompt)
+      const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
+      const parsedResorts = JSON.parse(cleanedCompletion)
+      
+      // Validate and get first resort from response
+      const validatedResorts = validateResorts([parsedResorts[0]], answers.countries)
+      
+      if (validatedResorts.length === 0) {
+        throw new Error('No matching resort found')
+      }
+
+      // Update the resorts array with the new resort
+      setResorts(prev => {
+        const updated = [...prev]
+        updated[index] = validatedResorts[0]
+        return updated
+      })
+
+    } catch (error) {
+      setError('Failed to get new resort recommendation')
+    } finally {
+      setLoadingCards(prev => ({ ...prev, [index]: false }))
+    }
+  }
+
   // Improved loading state
   if (isLoading) {
     return (
@@ -603,10 +668,15 @@ export default function ResultsPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 relative group">
           {resorts.map((resort, index) => (
             <div key={index} className="transition-all duration-300 group-hover:opacity-50 hover:!opacity-100">
-              <ResortCard 
-                resort={resort} 
-                rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} 
-              />
+              {loadingCards[index] ? (
+                <LoadingCard />
+              ) : (
+                <ResortCard 
+                  resort={resort} 
+                  rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} 
+                  onRemove={() => handleRemoveResort(index)}
+                />
+              )}
             </div>
           ))}
         </div>
