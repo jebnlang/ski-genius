@@ -151,24 +151,33 @@ export default function Component() {
                     <div className="p-6">
                       <h3 className="font-bold text-xl mb-2 text-gray-800">{resort.name}</h3>
                       <p className="text-sm text-gray-600 mb-1">{resort.location}, {resort.country}</p>
-                      <div className="flex items-center gap-2 mb-2">
+                      
+                      {/* Stats badges */}
+                      <div className="flex flex-wrap items-center gap-2 mb-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {resort.ski_area}
+                          {resort.ski_area} km of runs
                         </span>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {resort.village_altitude}
+                          {resort.number_of_lifts} lifts
                         </span>
                       </div>
-                      <div className="space-y-1">
-                        {resort.highlights && resort.highlights.slice(0, 2).map((highlight, index) => (
-                          <p key={index} className="text-sm font-medium text-blue-600">
-                            {highlight}
-                          </p>
-                        ))}
-                        <p className="text-sm text-gray-600">
-                          Difficulty: {Math.round(resort.difficulty.intermediate)}% intermediate
-                        </p>
+
+                      {/* Highlights */}
+                      <div className="mb-3">
+                        <h4 className="font-semibold text-sm text-gray-700 mb-2">Highlights:</h4>
+                        <ul className="list-disc list-inside space-y-1">
+                          {resort.highlights.map((highlight, index) => (
+                            <li key={index} className="text-sm text-gray-600">{highlight}</li>
+                          ))}
+                        </ul>
                       </div>
+
+                      {/* Resort description */}
+                      {resort.explanation && (
+                        <p className="text-sm text-gray-600 mt-3 italic">
+                          {resort.explanation}
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
