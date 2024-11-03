@@ -86,13 +86,12 @@ const useQuestionnaireState = () => {
   }, []) // Only run on mount
 
   const updateAnswers = (updates: Partial<Answers>) => {
-    setAnswers(prevAnswers => {
+    setAnswers((prevAnswers): Answers => {
       const newAnswers = { 
         ...prevAnswers, 
         ...updates,
       };
-  
-      // Save to localStorage
+    
       const storageData: StorageState = {
         answers: newAnswers,
         lastUpdated: new Date().toISOString(),
@@ -204,20 +203,44 @@ export default function Component() {
     return route ? routeToStep[route] || 1 : 1
   })
 
-  // Modify handleSetStep to use router.push instead of window.location
-  const handleSetStep = (newStep: number) => {
-    // Save current state before navigation
+  // Add this helper function to avoid code duplication
+  const navigateToStep = (newStep: number) => {
+    // Update local state
+    setStep(newStep)
+    
+    // Save to localStorage
     const storageData: StorageState = {
-      answers: answers,
+      answers,
       lastUpdated: new Date().toISOString(),
       currentStep: newStep
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
     
+    // Navigate
     const route = questionRoutes[newStep as keyof typeof questionRoutes]
     if (route) {
-      setStep(newStep)
-      router.push(`/questionnaire/${route}`)
+      router.push(`/questionnaire/${route}`, { scroll: false })
+    }
+  }
+
+  // Simplify handleSetStep to use the new helper
+  const handleSetStep = (newStep: number) => {
+    navigateToStep(newStep)
+  }
+
+  // Simplify handleNext to use the new helper
+  const handleNext = () => {
+    if (step < totalSteps) {
+      navigateToStep(step + 1)
+    } else {
+      router.push('/results')
+    }
+  }
+
+  // Simplify handlePrevious to use the new helper
+  const handlePrevious = () => {
+    if (step > 1) {
+      navigateToStep(step - 1)
     }
   }
 
@@ -241,29 +264,6 @@ export default function Component() {
       case 14: return !!answers.travelTime && (answers.travelTime === 'flexible' || answers.travelMonth.length > 0)
       case 15: return true
       default: return false
-    }
-  }
-
-  const handleNext = () => {
-    if (step < totalSteps) {
-      // Save current state before navigation
-      const storageData: StorageState = {
-        answers: answers,
-        lastUpdated: new Date().toISOString(),
-        currentStep: step + 1
-      }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
-      
-      handleSetStep(step + 1)
-    } else {
-      // Final step - navigate to results using router
-      router.push('/results')
-    }
-  }
-
-  const handlePrevious = () => {
-    if (step > 1) {
-      handleSetStep(step - 1)
     }
   }
 
