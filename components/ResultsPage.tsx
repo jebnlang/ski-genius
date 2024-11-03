@@ -451,32 +451,33 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
       throw new Error(`Error saving questionnaire: ${questionnaireError.details || questionnaireError.message}`)
     }
 
-    // Then, save each resort recommendation with only the data we're using
+    // Only save the best match (first resort)
+    const bestMatch = resorts[0]
     const questionnaireId = questionnaireData[0].id
-    const resortsToInsert = resorts.map((resort) => ({
-      questionnaire_id: questionnaireId,
-      name: resort.name,
-      location: resort.location,
-      country: resort.country,
-      difficulty: resort.difficulty,
-      runs: resort.runs,
-      ski_area: resort.skiArea,
-      number_of_lifts: resort.numberOfLifts,
-      village_altitude: resort.villageAltitude,
-      ski_range: resort.skiRange,
-      nightlife: resort.nightlife,
-      highlights: resort.highlights,
-      explanation: resort.explanation,
-      daily_pass_price: resort.pricing.dailyPass,
-      six_day_pass_price: resort.pricing.sixDayPass
-    }))
-
-    const { error: resortsError } = await supabase
+    
+    const { error: resortError } = await supabase
       .from('resort_recommendations')
-      .insert(resortsToInsert)
+      .insert([{
+        questionnaire_id: questionnaireId,
+        name: bestMatch.name,
+        location: bestMatch.location,
+        country: bestMatch.country,
+        difficulty: bestMatch.difficulty,
+        runs: bestMatch.runs,
+        ski_area: bestMatch.skiArea,
+        number_of_lifts: bestMatch.numberOfLifts,
+        village_altitude: bestMatch.villageAltitude,
+        ski_range: bestMatch.skiRange,
+        nightlife: bestMatch.nightlife,
+        highlights: bestMatch.highlights,
+        explanation: bestMatch.explanation,
+        daily_pass_price: bestMatch.pricing.dailyPass,
+        six_day_pass_price: bestMatch.pricing.sixDayPass,
+        match_tag: 'Best Match'
+      }])
 
-    if (resortsError) {
-      throw new Error(`Error saving resorts: ${resortsError.details || resortsError.message}`)
+    if (resortError) {
+      throw new Error(`Error saving resort: ${resortError.details || resortError.message}`)
     }
   } catch (error) {
     // Log the error and rethrow it
