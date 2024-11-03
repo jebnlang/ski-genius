@@ -62,6 +62,10 @@ interface Resort {
   nightlife: "Vibrant" | "Moderate" | "Quiet"
   highlights: string[]
   explanation?: string
+  pricing: {
+    dailyPass: string
+    sixDayPass: string
+  }
 }
 
 const DifficultyBar = ({ difficulty, runs }: { difficulty: Resort['difficulty'], runs: Resort['runs'] }) => (
@@ -175,6 +179,20 @@ const ResortCard = ({ resort, rank }: { resort: Resort, rank: string }) => (
             <span className="text-gray-800">{resort.nightlife}</span>
           </div>
         </div>
+        
+        <div className="col-span-2 mt-2 bg-green-50 rounded-lg p-3 border border-green-100">
+          <span className="text-green-600 font-semibold block mb-2">Lift Pass Pricing:</span>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="text-gray-600">Daily Pass:</span>
+              <p className="text-gray-800 font-medium">{resort.pricing.dailyPass}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">6-Day Pass:</span>
+              <p className="text-gray-800 font-medium">{resort.pricing.sixDayPass}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </CardContent>
   </Card>
@@ -205,7 +223,11 @@ const mockResorts: Resort[] = [
       "Challenging terrain for experts"
     ],
     explanation: "Perfect match for advanced skiers seeking challenging terrain and vibrant atmosphere.",
-    snow_condition: "Powder"
+    snow_condition: "Powder",
+    pricing: {
+      dailyPass: "$50",
+      sixDayPass: "$250"
+    }
   },
   {
     name: "Zermatt",
@@ -232,7 +254,11 @@ const mockResorts: Resort[] = [
       "Views of the Matterhorn"
     ],
     explanation: "Great for intermediate skiers with stunning views and charming atmosphere.",
-    snow_condition: "Groomed"
+    snow_condition: "Groomed",
+    pricing: {
+      dailyPass: "$60",
+      sixDayPass: "$300"
+    }
   },
   {
     name: "St. Moritz",
@@ -259,7 +285,11 @@ const mockResorts: Resort[] = [
       "Sunny climate"
     ],
     explanation: "Luxury resort perfect for those seeking both great skiing and upscale amenities.",
-    snow_condition: "Packed"
+    snow_condition: "Packed",
+    pricing: {
+      dailyPass: "$70",
+      sixDayPass: "$350"
+    }
   }
 ]
 
@@ -363,9 +393,14 @@ Suggest 3 ski resorts that best match these preferences. For each resort, provid
   "skiRange": "XXXX m - YYYY m",
   "nightlife": "Vibrant|Moderate|Quiet",
   "highlights": ["highlight1", "highlight2", "highlight3"],
-  "explanation": "1-2 sentences explaining why this resort matches"
+  "explanation": "1-2 sentences explaining why this resort matches",
+  "pricing": {
+    "dailyPass": "€XX",
+    "sixDayPass": "€XXX"
+  }
 }
 
+Ensure all pricing information is accurate and up-to-date for the current season.
 Respond with a JSON array of exactly 3 resort objects.`
 }
 
@@ -414,7 +449,9 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
       ski_range: resort.skiRange,
       nightlife: resort.nightlife,
       highlights: resort.highlights,
-      explanation: resort.explanation
+      explanation: resort.explanation,
+      daily_pass_price: resort.pricing.dailyPass,
+      six_day_pass_price: resort.pricing.sixDayPass
     }))
 
     const { error: resortsError } = await supabase
