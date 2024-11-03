@@ -11,12 +11,26 @@ import { useRouter } from 'next/navigation'
 interface RecentResort {
   id: string
   name: string
+  location: string
   country: string
-  match_rank: string
+  difficulty: {
+    easy: number
+    intermediate: number
+    advanced: number
+  }
+  runs: {
+    easy: number
+    intermediate: number
+    advanced: number
+  }
+  ski_area: string
+  number_of_lifts: number
+  village_altitude: string
+  ski_range: string
+  nightlife: string
   highlights: string[]
-  image_url: string
-  snow_condition: string
-  suitable_for: string[]
+  explanation: string | null
+  created_at: string
 }
 
 export default function Component() {
@@ -29,19 +43,34 @@ export default function Component() {
       try {
         const { data, error } = await supabase
           .from('resort_recommendations')
-          .select('*')
-          .eq('match_rank', 'Best Match')
+          .select(`
+            id,
+            name,
+            location,
+            country,
+            difficulty,
+            runs,
+            ski_area,
+            number_of_lifts,
+            village_altitude,
+            ski_range,
+            nightlife,
+            highlights,
+            explanation,
+            created_at
+          `)
           .order('created_at', { ascending: false })
           .limit(6)
 
         if (error) {
-          console.error('Error fetching recommendations:', error)
+          console.error('Error details:', error.message, error.details, error.hint)
           return
         }
 
+        console.log('Fetched data:', data)
         setRecentRecommendations(data || [])
       } catch (error) {
-        console.error('Error:', error)
+        console.error('Caught error:', error)
       } finally {
         setIsLoading(false)
       }
@@ -120,35 +149,26 @@ export default function Component() {
                   className="overflow-hidden transition-transform duration-300 hover:scale-105 bg-white bg-opacity-40 backdrop-blur-md border border-white"
                 >
                   <CardContent className="p-0">
-                    <Image
-                      src={resort.image_url || "/placeholder.svg"}
-                      alt={resort.name}
-                      width={500}
-                      height={300}
-                      className="w-full h-48 object-cover"
-                    />
                     <div className="p-6">
                       <h3 className="font-bold text-xl mb-2 text-gray-800">{resort.name}</h3>
-                      <p className="text-sm text-gray-600 mb-1">{resort.country}</p>
+                      <p className="text-sm text-gray-600 mb-1">{resort.location}, {resort.country}</p>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {resort.match_rank}
+                          {resort.ski_area}
                         </span>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {resort.snow_condition}
+                          {resort.village_altitude}
                         </span>
                       </div>
                       <div className="space-y-1">
-                        {resort.highlights && resort.highlights.slice(0, 1).map((highlight, index) => (
+                        {resort.highlights && resort.highlights.slice(0, 2).map((highlight, index) => (
                           <p key={index} className="text-sm font-medium text-blue-600">
                             {highlight}
                           </p>
                         ))}
-                        {resort.suitable_for && (
-                          <p className="text-sm text-gray-600">
-                            Perfect for: {resort.suitable_for.slice(0, 2).join(', ')}
-                          </p>
-                        )}
+                        <p className="text-sm text-gray-600">
+                          Difficulty: {Math.round(resort.difficulty.intermediate)}% intermediate
+                        </p>
                       </div>
                     </div>
                   </CardContent>
