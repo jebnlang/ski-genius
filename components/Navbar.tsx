@@ -77,10 +77,8 @@ const Navbar = () => {
             <DialogTitle className="text-2xl font-bold text-center text-gray-800">
               🎿 Hold Your Skis!
             </DialogTitle>
-            <DialogDescription className="text-center space-y-4">
-              <p className="text-lg text-gray-600">
-                Before we can show you the perfect ski resorts, we need to know a bit about your dream winter getaway!
-              </p>
+            <DialogDescription className="text-lg text-gray-600 text-center space-y-4">
+              Before we can show you the perfect ski resorts, we need to know a bit about your dream winter getaway!
               <Button 
                 onClick={() => {
                   setShowDialog(false)
