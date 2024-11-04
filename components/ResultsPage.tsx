@@ -359,6 +359,10 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
 
 // API prompt construction
 const constructPrompt = (answers: StorageState['answers']): string => {
+  const countryGuidance = answers.countries?.includes("Anywhere") 
+    ? "Since the user is open to any location, focus on established and well-known resorts across Europe. While they don't need to be the most famous ones (like Val d'Isère or Zermatt), suggest resorts that have proven track records, good infrastructure, and are generally well-reviewed by international visitors."
+    : `You must ONLY suggest resorts from these countries: ${answers.countries?.join(', ')}`;
+
   return `Based on the following user preferences from the questionnaire:
 - Group type: ${answers.groupType}
 - Children ages: ${answers.childrenAges?.join(', ') || 'N/A'}
@@ -379,15 +383,21 @@ const constructPrompt = (answers: StorageState['answers']): string => {
 - Additional info: ${answers.additionalInfo}
 
 CRITICAL REQUIREMENTS:
-1. COUNTRY RESTRICTION: You must ONLY suggest resorts from these countries: ${answers.countries?.join(', ')}
-   If "Anywhere" is selected, you may suggest resorts from any European country.
-   Under no circumstances suggest resorts from countries that weren't selected.
+1. LOCATION GUIDANCE: ${countryGuidance}
 
 2. SIMILAR TO LOVED RESORTS: The user loved these resorts: ${answers.lovedResorts}
    If the user specified any loved resorts, at least one recommendation should have similar characteristics.
 
-3. DIVERSE SUGGESTIONS: While one recommendation can be a well-known resort, at least one recommendation 
-   should be a hidden gem or lesser-known resort that matches their preferences.
+3. RESORT SELECTION CRITERIA:
+   - Focus on resorts with reliable infrastructure and services
+   - Prioritize resorts with good international accessibility
+   - Consider resorts with established ski schools and rental facilities
+   - Suggest places with proven snow records for the selected travel months
+
+4. DIVERSE SUGGESTIONS: While maintaining focus on established resorts, try to include:
+   - One very well-matched mainstream resort
+   - One slightly less crowded but equally well-equipped alternative
+   - One hidden gem that still meets quality and infrastructure standards
 
 Suggest 3 ski resorts that best match these preferences. For each resort, provide ONLY the following details in JSON format:
 {
@@ -674,7 +684,7 @@ export default function ResultsPage() {
               ) : (
                 <ResortCard 
                   resort={resort} 
-                  rank={index === 0 ? 'Best Match' : index === 1 ? 'Alternative' : 'Surprise Pick'} 
+                  rank={index === 0 ? 'Best Match' : index === 1 ? 'Hidden Gem' : 'Local Favorite'} 
                   onRemove={() => handleRemoveResort(index)}
                 />
               )}
