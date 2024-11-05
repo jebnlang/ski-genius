@@ -636,6 +636,21 @@ ${pricingGuidance}
 ... (rest of your existing prompt) ...`
 }
 
+// Add this function to determine price tag
+const getPriceTag = (price: string | undefined): string => {
+  if (!price) return "Unknown";
+  
+  const numericPrice = parseFloat(price.replace(/[€$£]/g, ''));
+  
+  if (numericPrice <= 200) {
+    return "Budget";
+  } else if (numericPrice <= 300) {
+    return "Mid-Range";
+  } else {
+    return "Premium";
+  }
+};
+
 const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[]) => {
   try {
     // First, save questionnaire answers
@@ -671,6 +686,22 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
     const bestMatch = resorts[0]
     const questionnaireId = questionnaireData[0].id
     
+    // Calculate price tag based on six day pass price
+    let priceTag = "Unknown"
+    if (bestMatch.pricing?.sixDayPass) {
+      const price = parseFloat(bestMatch.pricing.sixDayPass.replace(/[€$£]/g, ''))
+      if (price <= 200) {
+        priceTag = "Budget"
+      } else if (price <= 300) {
+        priceTag = "Mid-Range"
+      } else {
+        priceTag = "Premium"
+      }
+    }
+
+    console.log('Saving resort with price tag:', priceTag)
+    console.log('Six day pass price:', bestMatch.pricing?.sixDayPass)
+    
     const { error: resortError } = await supabase
       .from('resort_recommendations')
       .insert([{
@@ -689,19 +720,16 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
         explanation: bestMatch.explanation,
         daily_pass_price: bestMatch.pricing?.dailyPass,
         six_day_pass_price: bestMatch.pricing?.sixDayPass,
-        match_tag: 'Best Match'
+        match_tag: 'Best Match',
+        price_tag: priceTag  // Make sure this matches your column name exactly
       }])
 
     if (resortError) {
+      console.error('Error saving resort:', resortError)
       throw new Error(`Error saving resort: ${resortError.details || resortError.message}`)
     }
   } catch (error) {
-    // Log the error and rethrow it
-    if (error instanceof Error) {
-      console.log('Database error:', error.message)
-    } else {
-      console.log('Unknown database error occurred')
-    }
+    console.error('Database error:', error)
     throw error
   }
 }
