@@ -787,7 +787,7 @@ const RefinementDialog = ({
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="flexible" id="flexible" />
-                <Label htmlFor="flexible">I'm flexible</Label>
+                <Label htmlFor="flexible">I&apos;m flexible</Label>
               </div>
             </RadioGroup>
 
