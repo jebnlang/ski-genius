@@ -15,6 +15,7 @@ interface Answers {
   sportType: string
   countries: string[]
   skiingLevels: string[]
+  pricingSensitivity: string
   lessons: string
   nightlife: string
   snowPark: string
@@ -35,6 +36,7 @@ const defaultAnswers: Answers = {
   sportType: '',
   countries: [],
   skiingLevels: [],
+  pricingSensitivity: '',
   lessons: '',
   nightlife: '',
   snowPark: '',
@@ -174,16 +176,17 @@ const questionRoutes = {
   3: 'location',
   4: 'skill-level',
   5: 'resort-size',
-  6: 'lessons',
-  7: 'nightlife',
-  8: 'snow-park',
-  9: 'off-piste',
-  10: 'ski-in-ski-out',
-  11: 'resort-preferences',
-  12: 'activities',
-  13: 'previous-resorts',
-  14: 'travel-time',
-  15: 'additional-info'
+  6: 'pricing-sensitivity',
+  7: 'lessons',
+  8: 'nightlife',
+  9: 'snow-park',
+  10: 'off-piste',
+  11: 'ski-in-ski-out',
+  12: 'resort-preferences',
+  13: 'activities',
+  14: 'previous-resorts',
+  15: 'travel-time',
+  16: 'additional-info'
 }
 
 // Reverse mapping to get step number from route
@@ -244,7 +247,7 @@ export default function Component() {
     }
   }
 
-  const totalSteps = 15
+  const totalSteps = 16
 
   const isQuestionAnswered = () => {
     switch (step) {
@@ -253,16 +256,17 @@ export default function Component() {
       case 3: return answers.countries && answers.countries.length > 0 && answers.countries[0] !== ''
       case 4: return answers.skiingLevels.length > 0
       case 5: return answers.slopePreferences.length > 0
-      case 6: return !!answers.lessons
-      case 7: return !!answers.nightlife
-      case 8: return !!answers.snowPark
-      case 9: return !!answers.offPiste
-      case 10: return !!answers.skiInSkiOut
-      case 11: return answers.resortPreferences.length > 0
-      case 12: return answers.otherActivities.length > 0
-      case 13: return !!answers.lovedResorts
-      case 14: return !!answers.travelTime && (answers.travelTime === 'flexible' || answers.travelMonth.length > 0)
-      case 15: return true
+      case 6: return !!answers.pricingSensitivity
+      case 7: return !!answers.lessons
+      case 8: return !!answers.nightlife
+      case 9: return !!answers.snowPark
+      case 10: return !!answers.offPiste
+      case 11: return !!answers.skiInSkiOut
+      case 12: return answers.resortPreferences.length > 0
+      case 13: return answers.otherActivities.length > 0
+      case 14: return !!answers.lovedResorts
+      case 15: return !!answers.travelTime && (answers.travelTime === 'flexible' || answers.travelMonth.length > 0)
+      case 16: return true
       default: return false
     }
   }
@@ -422,6 +426,24 @@ export default function Component() {
       case 6:
         return (
           <div className="space-y-4">
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">How important is finding a budget-friendly destination?</h2>
+            <RadioGroup value={answers.pricingSensitivity} onValueChange={(value) => updateAnswers({ pricingSensitivity: value })}>
+              {[
+                'Very important - I\'d prefer destinations known for lower overall costs',
+                'Not important - I\'ll find suitable accommodation in any destination',
+                'Looking specifically for luxury destinations'
+              ].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`pricing-${option}`} className="border-blue-500 text-blue-500" />
+                  <Label htmlFor={`pricing-${option}`} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        )
+      case 7:
+        return (
+          <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Would anyone in your group like ski or snowboard lessons?</h2>
             <RadioGroup value={answers.lessons} onValueChange={(value) => updateAnswers({ lessons: value })}>
               {['Yes', 'No'].map((option) => (
@@ -433,7 +455,7 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 7:
+      case 8:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">How important is nightlife and après-ski?</h2>
@@ -447,10 +469,10 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 8:
+      case 9:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">
               Is having a snow park important?
               <div className="relative inline-block">
                 <div className="cursor-help group">
@@ -483,7 +505,7 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 9:
+      case 10:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">
@@ -519,7 +541,7 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 10:
+      case 11:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">
@@ -555,7 +577,7 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 11:
+      case 12:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">What&apos;s most important to you in a resort? Pick up to 3 things!</h2>
@@ -581,7 +603,7 @@ export default function Component() {
             </div>
           </div>
         )
-      case 12:
+      case 13:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">What other activities would you like to try?</h2>
@@ -606,7 +628,7 @@ export default function Component() {
             </div>
           </div>
         )
-      case 13:
+      case 14:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Have you visited any ski resorts you loved? We&apos;ll find more like them!</h2>
@@ -618,7 +640,7 @@ export default function Component() {
             />
           </div>
         )      
-      case 14:
+      case 15:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">When do you want to go skiing?</h2>
@@ -656,7 +678,7 @@ export default function Component() {
             )}
           </div>
         )
-      case 15:
+      case 16:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Is there anything else you&apos;d like to tell us about your perfect ski trip?</h2>

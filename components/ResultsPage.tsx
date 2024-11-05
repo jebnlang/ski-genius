@@ -44,6 +44,7 @@ interface StorageState {
     travelTime: string
     travelMonth: string[]
     additionalInfo: string
+    pricingSensitivity: string
   }
   lastUpdated: string
   currentStep: number
@@ -52,7 +53,6 @@ interface StorageState {
 type SnowCondition = "Powder" | "Groomed" | "Packed" | "Ice" | "Spring"
 
 interface Resort {
-  snow_condition: SnowCondition
   name: string
   location: string
   country: string
@@ -67,13 +67,14 @@ interface Resort {
     advanced: number
   }
   skiArea: string
-  numberOfLifts: number
-  villageAltitude: string
-  skiRange: string
+  numberOfLifts?: number
+  villageAltitude?: string
+  skiRange?: string
   nightlife: "Vibrant" | "Moderate" | "Quiet"
   highlights: string[]
   explanation?: string
-  pricing: {
+  snow_condition?: SnowCondition
+  pricing?: {
     dailyPass: string
     sixDayPass: string
   }
@@ -213,11 +214,11 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <span className="text-gray-600">Daily Pass:</span>
-              <p className="text-gray-800 font-medium">{resort.pricing.dailyPass}</p>
+              <p className="text-gray-800 font-medium">{resort.pricing?.dailyPass}</p>
             </div>
             <div>
               <span className="text-gray-600">6-Day Pass:</span>
-              <p className="text-gray-800 font-medium">{resort.pricing.sixDayPass}</p>
+              <p className="text-gray-800 font-medium">{resort.pricing?.sixDayPass}</p>
             </div>
           </div>
         </div>
@@ -323,123 +324,223 @@ const mockResorts: Resort[] = [
 
 // Validation function to check if resorts match selected countries
 const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort[] => {
+  console.log('Validating resorts:', resorts);
+  console.log('Selected countries:', selectedCountries);
+
   if (!Array.isArray(resorts)) {
-    throw new Error('Invalid resort data received')
+    console.error('Invalid resort data received:', resorts);
+    return [];
   }
 
-  // Basic data validation
+  // Basic data validation with more detailed logging
   const isValidResort = (resort: Resort): boolean => {
-    return (
-      typeof resort.name === 'string' &&
-      typeof resort.location === 'string' &&
-      typeof resort.country === 'string' &&
-      typeof resort.difficulty === 'object' &&
-      typeof resort.runs === 'object' &&
-      typeof resort.skiArea === 'string' &&
-      typeof resort.numberOfLifts === 'number' &&
-      typeof resort.villageAltitude === 'string' &&
-      typeof resort.skiRange === 'string' &&
-      Array.isArray(resort.highlights) &&
-      ['Vibrant', 'Moderate', 'Quiet'].includes(resort.nightlife)
-    )
-  }
+    const requiredFields = {
+      name: typeof resort.name === 'string',
+      location: typeof resort.location === 'string',
+      country: typeof resort.country === 'string',
+      difficulty: resort.difficulty && typeof resort.difficulty === 'object' &&
+        typeof resort.difficulty.easy === 'number' &&
+        typeof resort.difficulty.intermediate === 'number' &&
+        typeof resort.difficulty.advanced === 'number',
+      runs: resort.runs && typeof resort.runs === 'object' &&
+        typeof resort.runs.easy === 'number' &&
+        typeof resort.runs.intermediate === 'number' &&
+        typeof resort.runs.advanced === 'number',
+      skiArea: typeof resort.skiArea === 'string',
+      nightlife: ['Vibrant', 'Moderate', 'Quiet'].includes(resort.nightlife),
+      highlights: Array.isArray(resort.highlights)
+    };
+
+    // Log which fields are invalid
+    const invalidFields = Object.entries(requiredFields)
+      .filter(([_, isValid]) => !isValid)
+      .map(([field]) => field);
+
+    if (invalidFields.length > 0) {
+      console.error('Invalid fields for resort:', resort.name, invalidFields);
+    }
+
+    return Object.values(requiredFields).every(Boolean);
+  };
 
   // Filter out invalid resorts
-  const validResorts = resorts.filter(isValidResort)
+  const validResorts = resorts.map(resort => ({
+    ...resort,
+    // Ensure nightlife is one of the valid values
+    nightlife: ['Vibrant', 'Moderate', 'Quiet'].includes(resort.nightlife) 
+      ? resort.nightlife 
+      : 'Moderate',
+    // Ensure required fields exist
+    pricing: resort.pricing || { dailyPass: 'N/A', sixDayPass: 'N/A' },
+    snow_condition: resort.snow_condition || 'Packed',
+    villageAltitude: resort.villageAltitude || 'N/A',
+    skiRange: resort.skiRange || 'N/A',
+    numberOfLifts: resort.numberOfLifts || 0
+  })).filter(isValidResort);
+
+  console.log('Valid resorts after basic validation:', validResorts);
 
   if (validResorts.length === 0) {
-    throw new Error('No valid resort data found')
+    console.error('No valid resort data found');
+    return [];
   }
 
   // If "Anywhere" is selected, return all valid resorts
   if (selectedCountries.includes("Anywhere")) {
-    return validResorts
+    return validResorts;
   }
 
   // Filter resorts by selected countries
   const countryMatchedResorts = validResorts.filter(resort => 
     selectedCountries.includes(resort.country)
-  )
+  );
 
+  console.log('Country matched resorts:', countryMatchedResorts);
+
+  // If no country matches found, return all valid resorts
   if (countryMatchedResorts.length === 0) {
-    throw new Error('No resorts found in selected countries')
+    return validResorts;
   }
 
-  return countryMatchedResorts
+  return countryMatchedResorts;
 }
 
 // API prompt construction
 const constructPrompt = (answers: StorageState['answers']): string => {
-  const countryGuidance = answers.countries?.includes("Anywhere") 
-    ? "Since the user is open to any location, focus on established and well-known resorts across Europe. While they don't need to be the most famous ones (like Val d'Isère or Zermatt), suggest resorts that have proven track records, good infrastructure, and are generally well-reviewed by international visitors."
-    : `You must ONLY suggest resorts from these countries: ${answers.countries?.join(', ')}`;
+  // Define budget-friendly countries in order of affordability
+  const budgetFriendlyCountries = [
+    'Bulgaria', 'Serbia', 'Poland', 'Romania', 'Bosnia and Herzegovina',
+    'Slovakia', 'Czech Republic', 'Montenegro', 'Slovenia', 'Andorra'
+  ];
+
+  const isBudgetFriendly = answers.pricingSensitivity === 'Very important - I\'d prefer destinations known for lower overall costs';
+
+  const pricingGuidance = isBudgetFriendly
+    ? answers.countries?.includes("Anywhere")
+      ? `CRITICAL BUDGET CONSIDERATION: User specifically requested budget-friendly options.
+         YOU MUST PRIORITIZE resorts from these specific countries in this exact order:
+         1. Bulgaria (most affordable)
+         2. Serbia
+         3. Poland
+         4. Romania
+         5. Bosnia and Herzegovina
+         6. Slovakia
+         7. Czech Republic
+         8. Montenegro
+         9. Slovenia
+         10. Andorra
+         
+         STRICT REQUIREMENTS:
+         - Your first recommendation MUST be from Bulgaria, Serbia, or Poland
+         - Your second recommendation MUST be from one of the other listed countries
+         - Your third recommendation can be from any of these countries`
+      : `CRITICAL BUDGET CONSIDERATION: User specifically requested budget-friendly options.
+         STRICT COUNTRY REQUIREMENT: YOU MUST ONLY suggest resorts from: ${answers.countries?.join(', ')}
+         
+         Within these countries, prioritize:
+         - The most affordable resorts available
+         - Lesser-known, smaller resorts with lower prices
+         - Areas away from major tourist hubs
+         - Resorts with:
+           * The lowest lift pass prices in the region
+           * Budget accommodation options nearby
+           * Good public transport connections
+           * Affordable ski rental and lessons
+           * Reasonable food and drink prices
+         
+         DO NOT suggest resorts from any other countries, even if they are more affordable.`
+    : `STANDARD PRICING GUIDANCE: Focus on resorts that provide good value while meeting the user's quality expectations.
+       Consider:
+       - Mid-range lift pass prices
+       - Mix of accommodation options
+       - Reasonable equipment rental costs
+       - Balanced food and drink prices
+       - Good quality-to-price ratio for facilities`
 
   return `Based on the following user preferences from the questionnaire:
-- Group type: ${answers.groupType}
-- Children ages: ${answers.childrenAges?.join(', ') || 'N/A'}
-- Ski or snowboard: ${answers.sportType}
-- Desired countries: ${answers.countries?.join(', ') || 'Anywhere'}
-- Skiing levels: ${answers.skiingLevels?.join(', ')}
-- Resort size preference: ${answers.slopePreferences?.join(', ')}
-- Lessons needed: ${answers.lessons}
-- Nightlife importance: ${answers.nightlife}
-- Snow park importance: ${answers.snowPark}
-- Off-piste importance: ${answers.offPiste}
-- Ski-in/ski-out preference: ${answers.skiInSkiOut}
-- Resort preferences: ${answers.resortPreferences?.join(', ')}
-- Other activities: ${answers.otherActivities?.join(', ')}
-- Loved resorts: ${answers.lovedResorts}
-- Travel time: ${answers.travelTime}
-- Travel month: ${answers.travelMonth?.join(', ') || 'Flexible'}
-- Additional info: ${answers.additionalInfo}
+
+Experience Level: ${answers.skiingLevels?.join(', ')}
+Group Type: ${answers.groupType}
+${answers.childrenAges ? `Children's Ages: ${answers.childrenAges.join(', ')}` : ''}
+Sport: ${answers.sportType}
+Nightlife Preference: ${answers.nightlife}
+Snow Park Interest: ${answers.snowPark}
+Off-Piste Interest: ${answers.offPiste}
+Ski-in/Ski-out Preference: ${answers.skiInSkiOut}
 
 CRITICAL REQUIREMENTS:
-1. LOCATION GUIDANCE: ${countryGuidance}
+1. LOCATION REQUIREMENT: ${answers.countries?.includes("Anywhere")
+     ? "User is open to any location that matches their preferences."
+     : `YOU MUST ONLY SUGGEST RESORTS FROM: ${answers.countries?.join(', ')}. This is a non-negotiable requirement.`}
 
-2. SIMILAR TO LOVED RESORTS: The user loved these resorts: ${answers.lovedResorts}
-   If the user specified any loved resorts, at least one recommendation should have similar characteristics.
+2. ${pricingGuidance}
 
 3. RESORT SELECTION CRITERIA:
-   - Focus on resorts with reliable infrastructure and services
-   - Prioritize resorts with good international accessibility
-   - Consider resorts with established ski schools and rental facilities
-   - Suggest places with proven snow records for the selected travel months
+   ${isBudgetFriendly 
+     ? answers.countries?.includes("Anywhere")
+       ? `STRICT BUDGET FOCUS:
+          - All suggestions must be from the budget-friendly countries listed above
+          - Daily lift pass prices should be under €40
+          - Must have good value rental equipment available`
+       : `STRICT BUDGET FOCUS within selected countries (${answers.countries?.join(', ')}):
+          - Find the most economical options in these specific locations
+          - Focus on value seasons and package deals
+          - Prioritize areas with lower overall costs
+          - Look for resorts with reasonable lift pass prices
+          - Must have budget-friendly accommodation options`
+     : `STANDARD CRITERIA:
+        - Balance of quality and value
+        - Good infrastructure and facilities
+        - Suitable terrain for specified skill levels
+        - Appropriate amenities for group type`}
 
-4. DIVERSE SUGGESTIONS: While maintaining focus on established resorts, try to include:
-   - One very well-matched mainstream resort
-   - One slightly less crowded but equally well-equipped alternative
-   - One hidden gem that still meets quality and infrastructure standards
+4. DIVERSE SUGGESTIONS: While maintaining focus on established resorts, provide:
+   ${answers.countries?.includes("Anywhere")
+     ? isBudgetFriendly
+       ? `- First resort MUST be from Bulgaria, Serbia, or Poland
+          - Second resort MUST be from another budget-friendly country listed above
+          - Third resort MUST also be from the budget-friendly countries list`
+       : `- Three different resorts with distinct characteristics
+          - Mix of resort sizes and atmospheres
+          - Variety of terrain types`
+     : `- Three different resorts from ${answers.countries?.join(', ')}, prioritizing the most affordable options`}
 
-Suggest 3 ski resorts that best match these preferences. For each resort, provide ONLY the following details in JSON format:
+CRITICAL FORMAT REQUIREMENTS:
+Each resort MUST include these exact fields in this format:
 {
-  "name": "Resort Name",
-  "location": "Specific Region/Area",
-  "country": "Country Name",
+  "name": string,
+  "location": string,
+  "country": string,
   "difficulty": {
-    "easy": percentage,
-    "intermediate": percentage,
-    "advanced": percentage
+    "easy": number (percentage),
+    "intermediate": number (percentage),
+    "advanced": number (percentage)
   },
   "runs": {
-    "easy": number,
-    "intermediate": number,
-    "advanced": number
+    "easy": number (count),
+    "intermediate": number (count),
+    "advanced": number (count)
   },
-  "skiArea": "XXX km",
+  "skiArea": string (e.g. "75 km"),
   "numberOfLifts": number,
-  "villageAltitude": "XXXX m",
-  "skiRange": "XXXX m - YYYY m",
-  "nightlife": "Vibrant|Moderate|Quiet",
-  "highlights": ["highlight1", "highlight2", "highlight3"],
-  "explanation": "1-2 sentences explaining why this resort matches",
+  "villageAltitude": string (e.g. "1,500 m"),
+  "skiRange": string (e.g. "1,500 m - 3,000 m"),
+  "nightlife": "Vibrant" | "Moderate" | "Quiet",
+  "highlights": string[],
+  "explanation": string,
   "pricing": {
-    "dailyPass": "€XX",
-    "sixDayPass": "€XXX"
+    "dailyPass": string (e.g. "€45"),
+    "sixDayPass": string (e.g. "€225")
   }
 }
 
-Ensure all pricing information is accurate and up-to-date for the current season.
-Respond with a JSON array of exactly 3 resort objects.`
+IMPORTANT: ALL fields listed above are required. Do not omit any fields.
+Each resort must include complete information for altitude, ski range, and pricing.
+Format all prices in euros (€).
+
+Please provide exactly three resort recommendations in valid JSON format.
+${pricingGuidance}
+... (rest of your existing prompt) ...`
 }
 
 const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[]) => {
@@ -464,7 +565,8 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
         loved_resorts: answers.lovedResorts,
         travel_time: answers.travelTime,
         travel_month: answers.travelMonth,
-        additional_info: answers.additionalInfo
+        additional_info: answers.additionalInfo,
+        pricing_sensitivity: answers.pricingSensitivity
       }])
       .select()
 
@@ -492,8 +594,8 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
         nightlife: bestMatch.nightlife,
         highlights: bestMatch.highlights,
         explanation: bestMatch.explanation,
-        daily_pass_price: bestMatch.pricing.dailyPass,
-        six_day_pass_price: bestMatch.pricing.sixDayPass,
+        daily_pass_price: bestMatch.pricing?.dailyPass,
+        six_day_pass_price: bestMatch.pricing?.sixDayPass,
         match_tag: 'Best Match'
       }])
 
@@ -575,6 +677,26 @@ const RefinementDialog = ({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Add Pricing Sensitivity section before Sport Type */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Budget Preference</Label>
+            <RadioGroup 
+              value={tempAnswers.pricingSensitivity} 
+              onValueChange={(value) => setTempAnswers(prev => ({ ...prev, pricingSensitivity: value }))}
+            >
+              {[
+                'Very important - I\'d prefer destinations known for lower overall costs',
+                'Not important - I\'ll find suitable accommodation in any destination',
+                'Looking specifically for luxury destinations'
+              ].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`pricing-${option}`} />
+                  <Label htmlFor={`pricing-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
 
           {/* Sport Type */}
@@ -858,7 +980,9 @@ export default function ResultsPage() {
         let parsedData: StorageState
         try {
           parsedData = JSON.parse(savedData)
+          console.log('Parsed questionnaire data:', parsedData); // Debug log
         } catch (e) {
+          console.error('Error parsing localStorage data:', e);
           setError('Error loading your preferences. Please try again.')
           router.push('/questionnaire')
           return
@@ -867,31 +991,44 @@ export default function ResultsPage() {
         const { answers } = parsedData
 
         try {
+          console.log('Sending prompt to AI...'); // Debug log
           const completion = await complete(constructPrompt(answers))
+          console.log('Raw AI response:', completion); // Debug log
           
           const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
+          console.log('Cleaned AI response:', cleanedCompletion); // Debug log
           
           let parsedResorts: Resort[]
           try {
             parsedResorts = JSON.parse(cleanedCompletion)
+            console.log('Parsed resorts:', parsedResorts); // Debug log
           } catch (parseError) {
-            console.error('Error parsing AI response:', parseError)
+            console.error('Error parsing AI response:', parseError, '\nResponse was:', cleanedCompletion)
             throw new Error('Unable to process resort recommendations')
           }
           
           // Validate resort data
           if (!Array.isArray(parsedResorts) || parsedResorts.length === 0) {
+            console.error('Invalid or empty resorts array:', parsedResorts);
             throw new Error('No resort recommendations received')
           }
 
           // Validate that resorts match selected countries
           const validatedResorts = validateResorts(parsedResorts, answers.countries)
+          console.log('Validated resorts:', validatedResorts); // Debug log
           
           if (validatedResorts.length === 0) {
-            throw new Error('No resorts match your selected countries')
+            // If no validated resorts, use mock data in development
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Using mock data as fallback');
+              const validatedMockResorts = validateResorts(mockResorts, answers.countries)
+              setResorts(validatedMockResorts)
+            } else {
+              throw new Error('No resorts match your selected countries')
+            }
+          } else {
+            setResorts(validatedResorts)
           }
-
-          setResorts(validatedResorts)
           
           // Save to database
           try {
