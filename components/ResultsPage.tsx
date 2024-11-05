@@ -553,7 +553,7 @@ const RefinementDialog = ({
 
             {tempAnswers.groupType === 'Family with children' && (
               <div className="mt-4 space-y-2">
-                <Label className="text-md font-medium">Children's Ages</Label>
+                <Label className="text-md font-medium">Children&apos;s Ages</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {['Under 5', '5-12', '13-17'].map((age) => (
                     <div key={age} className="flex items-center space-x-2">
