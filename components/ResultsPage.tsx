@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
+import { trackResortView, trackResortRemoval, trackSearchRefinement } from '@/utils/analytics'
 
 // Define all necessary types
 interface StorageState {
@@ -1246,6 +1247,7 @@ export default function ResultsPage() {
   }, [complete, router])
 
   const handleRemoveResort = async (index: number) => {
+    trackResortRemoval(resorts[index].name)
     try {
       setLoadingCards(prev => ({ ...prev, [index]: true }))
       
@@ -1286,6 +1288,7 @@ export default function ResultsPage() {
 
   // Update handlePreferenceUpdate to save changes
   const handlePreferenceUpdate = async (newAnswers: StorageState['answers']) => {
+    trackSearchRefinement()
     try {
       setIsLoading(true)
       setError(null)
@@ -1313,6 +1316,15 @@ export default function ResultsPage() {
       setIsLoading(false)
     }
   }
+
+  // Add tracking when resorts are viewed
+  useEffect(() => {
+    if (resorts.length > 0) {
+      resorts.forEach(resort => {
+        trackResortView(resort.name)
+      })
+    }
+  }, [resorts])
 
   // Improved loading state
   if (isLoading) {

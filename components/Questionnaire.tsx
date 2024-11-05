@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { trackQuestionnaireStep } from '@/utils/analytics'
 
 interface Answers {
   groupType: string
@@ -699,6 +700,13 @@ export default function Component() {
     const savedData = localStorage.getItem(STORAGE_KEY)
     console.log('Current localStorage data:', savedData ? JSON.parse(savedData) : null)
   }, [pathname]) // Log whenever pathname changes
+
+  useEffect(() => {
+    const currentRoute = questionRoutes[step as keyof typeof questionRoutes]
+    if (currentRoute) {
+      trackQuestionnaireStep(step, currentRoute)
+    }
+  }, [step])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden">
