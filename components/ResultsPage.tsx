@@ -495,10 +495,36 @@ const constructPrompt = (answers: StorageState['answers']): string => {
     'Slovakia', 'Czech Republic', 'Montenegro', 'Slovenia', 'Andorra'
   ];
 
+  // Define luxury resort destinations
+  const luxuryDestinations = [
+    'Courchevel', 'Zermatt', 'St. Moritz', 'Verbier', 'Gstaad',
+    'Lech-Zürs', 'Kitzbühel', 'Megève', 'Val d\'Isère', 'Cortina d\'Ampezzo'
+  ];
+
+  const isLuxuryFocused = answers.pricingSensitivity === 'Looking specifically for luxury destinations';
   const isBudgetFriendly = answers.pricingSensitivity === 'Very important - I\'d prefer destinations known for lower overall costs';
 
-  const pricingGuidance = isBudgetFriendly
-    ? answers.countries?.includes("Anywhere")
+  const pricingGuidance = isLuxuryFocused
+    ? `CRITICAL LUXURY REQUIREMENT: User specifically requested luxury destinations.
+       STRICT REQUIREMENTS:
+       - Focus ONLY on world-renowned luxury ski resorts
+       - Prioritize resorts known for:
+         * 5-star hotels and Michelin-starred restaurants
+         * High-end boutiques and designer shopping
+         * Premium spa facilities
+         * Exclusive VIP services
+         * Private ski instructors and guides
+         * Helicopter transfers
+         * Exceptional service standards
+       
+       PRICING EXPECTATIONS:
+       - Daily lift passes should be in the premium range (€80+)
+       - Focus on resorts with luxury accommodation options
+       - Include resorts known for their wealthy clientele
+       
+       SUGGESTED LUXURY DESTINATIONS (if matching selected countries):
+       ${luxuryDestinations.join(', ')}`
+    : isBudgetFriendly
       ? `CRITICAL BUDGET CONSIDERATION: User specifically requested budget-friendly options.
          YOU MUST PRIORITIZE resorts from these specific countries in this exact order:
          1. Bulgaria (most affordable)
@@ -516,28 +542,13 @@ const constructPrompt = (answers: StorageState['answers']): string => {
          - Your first recommendation MUST be from Bulgaria, Serbia, or Poland
          - Your second recommendation MUST be from one of the other listed countries
          - Your third recommendation can be from any of these countries`
-      : `CRITICAL BUDGET CONSIDERATION: User specifically requested budget-friendly options.
-         STRICT COUNTRY REQUIREMENT: YOU MUST ONLY suggest resorts from: ${answers.countries?.join(', ')}
-         
-         Within these countries, prioritize:
-         - The most affordable resorts available
-         - Lesser-known, smaller resorts with lower prices
-         - Areas away from major tourist hubs
-         - Resorts with:
-           * The lowest lift pass prices in the region
-           * Budget accommodation options nearby
-           * Good public transport connections
-           * Affordable ski rental and lessons
-           * Reasonable food and drink prices
-         
-         DO NOT suggest resorts from any other countries, even if they are more affordable.`
-    : `STANDARD PRICING GUIDANCE: Focus on resorts that provide good value while meeting the user's quality expectations.
-       Consider:
-       - Mid-range lift pass prices
-       - Mix of accommodation options
-       - Reasonable equipment rental costs
-       - Balanced food and drink prices
-       - Good quality-to-price ratio for facilities`
+      : `STANDARD PRICING GUIDANCE: Focus on resorts that provide good value while meeting the user's quality expectations.
+         Consider:
+         - Mid-range lift pass prices
+         - Mix of accommodation options
+         - Reasonable equipment rental costs
+         - Balanced food and drink prices
+         - Good quality-to-price ratio for facilities`
 
   return `Based on the following user preferences from the questionnaire:
 
