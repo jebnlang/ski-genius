@@ -9,9 +9,20 @@ import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Snowflake, Users, Mountain, Martini, MapPin, X } from 'lucide-react'
+import { Snowflake, Users, Mountain, Martini, MapPin, X, Filter } from 'lucide-react'
 import { supabase } from '@/utils/supabase'
 import { PostgrestError } from '@supabase/supabase-js'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 
 // Define all necessary types
 interface StorageState {
@@ -500,6 +511,328 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
   }
 }
 
+// Update the RefinementDialog component
+const RefinementDialog = ({ 
+  currentAnswers,
+  onUpdateAnswers 
+}: { 
+  currentAnswers: StorageState['answers'],
+  onUpdateAnswers: (newAnswers: StorageState['answers']) => void 
+}) => {
+  const [tempAnswers, setTempAnswers] = useState(currentAnswers)
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button 
+          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
+          text-white rounded-full px-6 py-3 shadow-lg flex items-center gap-2 transition-all duration-300 
+          hover:shadow-blue-400/30 hover:shadow-xl"
+        >
+          <Filter className="w-4 h-4" />
+          Refine Search
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Refine Your Search</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-8 py-4">
+          {/* Group Type */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Group Type</Label>
+            <RadioGroup value={tempAnswers.groupType} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, groupType: value }))}>
+              {['Couple', 'Group of friends', 'Family with children', 'Family without children', 'Mixed group family & friends'].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`group-${option}`} />
+                  <Label htmlFor={`group-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+
+            {tempAnswers.groupType === 'Family with children' && (
+              <div className="mt-4 space-y-2">
+                <Label className="text-md font-medium">Children's Ages</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['Under 5', '5-12', '13-17'].map((age) => (
+                    <div key={age} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`age-${age}`}
+                        checked={tempAnswers.childrenAges.includes(age)}
+                        onCheckedChange={(checked) => {
+                          setTempAnswers(prev => ({
+                            ...prev,
+                            childrenAges: checked 
+                              ? [...prev.childrenAges, age]
+                              : prev.childrenAges.filter(a => a !== age)
+                          }))
+                        }}
+                      />
+                      <Label htmlFor={`age-${age}`}>{age}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sport Type */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Sport Type</Label>
+            <RadioGroup value={tempAnswers.sportType} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, sportType: value }))}>
+              {['Skiers', 'Snowboarders', 'Mixed'].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`sport-${option}`} />
+                  <Label htmlFor={`sport-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Location */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Preferred Countries</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                'Anywhere', 'France', 'Austria', 'Switzerland', 'Italy',
+                'Germany', 'Norway', 'Sweden', 'Spain', 'Bulgaria',
+                'Slovenia', 'Czech Republic', 'Poland', 'Finland',
+                'Andorra', 'Greece'
+              ].map((country) => (
+                <div key={country} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`country-${country}`}
+                    checked={tempAnswers.countries.includes(country)}
+                    onCheckedChange={(checked) => {
+                      let newCountries: string[];
+                      if (country === 'Anywhere') {
+                        newCountries = checked ? ['Anywhere'] : [];
+                      } else {
+                        if (checked) {
+                          newCountries = [
+                            ...tempAnswers.countries.filter(c => c !== 'Anywhere'),
+                            country
+                          ];
+                        } else {
+                          newCountries = tempAnswers.countries.filter(c => c !== country);
+                          if (newCountries.length === 0) {
+                            newCountries = ['Anywhere'];
+                          }
+                        }
+                      }
+                      setTempAnswers(prev => ({ ...prev, countries: newCountries }));
+                    }}
+                  />
+                  <Label htmlFor={`country-${country}`}>{country}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Skiing Level */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Skiing Level</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {['First timers', 'Beginners', 'Intermediates', 'Advanced'].map((level) => (
+                <div key={level} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`level-${level}`}
+                    checked={tempAnswers.skiingLevels.includes(level)}
+                    onCheckedChange={(checked) => {
+                      setTempAnswers(prev => ({
+                        ...prev,
+                        skiingLevels: checked 
+                          ? [...prev.skiingLevels, level]
+                          : prev.skiingLevels.filter(l => l !== level)
+                      }))
+                    }}
+                  />
+                  <Label htmlFor={`level-${level}`}>{level}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Resort Size */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Resort Size</Label>
+            <RadioGroup
+              value={tempAnswers.slopePreferences[0]}
+              onValueChange={(value) => {
+                setTempAnswers(prev => ({
+                  ...prev,
+                  slopePreferences: [value]
+                }))
+              }}
+            >
+              {['Small and charming', 'Medium-sized resort', 'Large ski area', "I don't mind"].map((size) => (
+                <div key={size} className="flex items-center space-x-2">
+                  <RadioGroupItem value={size} id={`size-${size}`} />
+                  <Label htmlFor={`size-${size}`}>{size}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Lessons */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Lessons Needed</Label>
+            <RadioGroup value={tempAnswers.lessons} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, lessons: value }))}>
+              {['Yes', 'No'].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`lessons-${option}`} />
+                  <Label htmlFor={`lessons-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Nightlife */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Nightlife Importance</Label>
+            <RadioGroup value={tempAnswers.nightlife} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, nightlife: value }))}>
+              {['Very important', 'Somewhat important', 'Not important'].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`nightlife-${option}`} />
+                  <Label htmlFor={`nightlife-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Snow Park */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Snow Park Importance</Label>
+            <RadioGroup value={tempAnswers.snowPark} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, snowPark: value }))}>
+              {['Very important', 'Somewhat important', 'Not important'].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`snowpark-${option}`} />
+                  <Label htmlFor={`snowpark-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Off-Piste */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Off-Piste Importance</Label>
+            <RadioGroup value={tempAnswers.offPiste} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, offPiste: value }))}>
+              {['Very important', 'Somewhat important', 'Not important'].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`offpiste-${option}`} />
+                  <Label htmlFor={`offpiste-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Ski-in/Ski-out */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Ski-in/Ski-out Preference</Label>
+            <RadioGroup value={tempAnswers.skiInSkiOut} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, skiInSkiOut: value }))}>
+              {['Yes, must have', 'Nice to have', "Don't care"].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`skiinout-${option}`} />
+                  <Label htmlFor={`skiinout-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Important Features */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Most Important Features (Pick up to 3)</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                'Extensive ski area',
+                'Less crowded slopes',
+                'Close to the airport',
+                'Family-friendly',
+                'Peaceful atmosphere',
+                'Scenic beauty',
+                'Modern lift system',
+                'Snow sure- High altitude resort'
+              ].map((feature) => (
+                <div key={feature} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`feature-${feature}`}
+                    checked={tempAnswers.resortPreferences.includes(feature)}
+                    onCheckedChange={(checked) => {
+                      setTempAnswers(prev => ({
+                        ...prev,
+                        resortPreferences: checked
+                          ? [...prev.resortPreferences, feature].slice(0, 3)
+                          : prev.resortPreferences.filter(f => f !== feature)
+                      }))
+                    }}
+                    disabled={
+                      tempAnswers.resortPreferences.length >= 3 && 
+                      !tempAnswers.resortPreferences.includes(feature)
+                    }
+                  />
+                  <Label htmlFor={`feature-${feature}`}>{feature}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Travel Time */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">When do you want to go?</Label>
+            <RadioGroup value={tempAnswers.travelTime} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, travelTime: value }))}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="month" id="month" />
+                <Label htmlFor="month">I know the month</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="flexible" id="flexible" />
+                <Label htmlFor="flexible">I'm flexible</Label>
+              </div>
+            </RadioGroup>
+
+            {tempAnswers.travelTime === 'month' && (
+              <div className="mt-4 space-y-2">
+                <Label className="text-md font-medium">Select Month(s)</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['December', 'January', 'February', 'March', 'April'].map((month) => (
+                    <div key={month} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`month-${month}`}
+                        checked={tempAnswers.travelMonth.includes(month)}
+                        onCheckedChange={(checked) => {
+                          setTempAnswers(prev => ({
+                            ...prev,
+                            travelMonth: checked
+                              ? [...prev.travelMonth, month]
+                              : prev.travelMonth.filter(m => m !== month)
+                          }))
+                        }}
+                      />
+                      <Label htmlFor={`month-${month}`}>{month}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button 
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+            onClick={() => {
+              onUpdateAnswers(tempAnswers)
+              const closeButton = document.querySelector('[aria-label="Close"]')
+              if (closeButton instanceof HTMLButtonElement) closeButton.click()
+            }}
+          >
+            Update Results
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -632,6 +965,38 @@ export default function ResultsPage() {
     }
   }
 
+  // Modify the ResultsPage component
+  const handlePreferenceUpdate = async (newAnswers: StorageState['answers']) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      // Update localStorage
+      const storageData: StorageState = {
+        answers: newAnswers,
+        lastUpdated: new Date().toISOString(),
+        currentStep: 15 // Last step
+      }
+      localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
+
+      // Get new results
+      const completion = await complete(constructPrompt(newAnswers))
+      const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
+      const parsedResorts = JSON.parse(cleanedCompletion)
+      const validatedResorts = validateResorts(parsedResorts, newAnswers.countries)
+
+      setResorts(validatedResorts)
+      
+      // Save to database
+      await saveToDatabase(newAnswers, validatedResorts)
+
+    } catch (error) {
+      setError('Failed to update results. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Improved loading state
   if (isLoading) {
     return (
@@ -673,7 +1038,15 @@ export default function ResultsPage() {
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">Your Perfect Ski Destinations</h1>
-          <p className="text-gray-600">Based on your preferences, we&apos;ve found these amazing matches</p>
+          <p className="text-gray-600 mb-6">Based on your preferences, we&apos;ve found these amazing matches</p>
+          {!isLoading && !error && (
+            <div className="flex justify-center">
+              <RefinementDialog 
+                currentAnswers={JSON.parse(localStorage.getItem('ski_questionnaire_data') || '{}').answers}
+                onUpdateAnswers={handlePreferenceUpdate}
+              />
+            </div>
+          )}
         </div>
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 relative group">
