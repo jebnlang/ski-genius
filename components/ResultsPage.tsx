@@ -392,7 +392,7 @@ const mockResorts: Resort[] = [
   }
 ]
 
-// Add this constant at the top of the file
+// Define the EUROPEAN_COUNTRIES constant
 const EUROPEAN_COUNTRIES = [
   'France',
   'Austria',
@@ -847,10 +847,22 @@ const RefinementDialog = ({
             <Label className="text-lg font-semibold">Preferred Countries</Label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                'Anywhere', 'France', 'Austria', 'Switzerland', 'Italy',
-                'Germany', 'Norway', 'Sweden', 'Spain', 'Bulgaria',
-                'Slovenia', 'Czech Republic', 'Poland', 'Finland',
-                'Andorra', 'Greece'
+                'Anywhere in Europe',
+                'France',
+                'Austria',
+                'Switzerland',
+                'Italy',
+                'Germany',
+                'Norway',
+                'Sweden',
+                'Spain',
+                'Bulgaria',
+                'Slovenia',
+                'Czech Republic',
+                'Poland',
+                'Finland',
+                'Andorra',
+                'Greece'
               ].map((country) => (
                 <div key={country} className="flex items-center space-x-2">
                   <Checkbox
@@ -858,18 +870,18 @@ const RefinementDialog = ({
                     checked={tempAnswers.countries.includes(country)}
                     onCheckedChange={(checked) => {
                       let newCountries: string[];
-                      if (country === 'Anywhere') {
-                        newCountries = checked ? ['Anywhere'] : [];
+                      if (country === 'Anywhere in Europe') {
+                        newCountries = checked ? ['Anywhere in Europe'] : [];
                       } else {
                         if (checked) {
                           newCountries = [
-                            ...tempAnswers.countries.filter(c => c !== 'Anywhere'),
+                            ...tempAnswers.countries.filter(c => c !== 'Anywhere in Europe'),
                             country
                           ];
                         } else {
                           newCountries = tempAnswers.countries.filter(c => c !== country);
                           if (newCountries.length === 0) {
-                            newCountries = ['Anywhere'];
+                            newCountries = ['Anywhere in Europe'];
                           }
                         }
                       }

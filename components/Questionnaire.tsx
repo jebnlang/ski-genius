@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { trackQuestionnaireStep } from '@/utils/analytics'
 
 interface Answers {
   groupType: string
@@ -332,7 +331,7 @@ export default function Component() {
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Where would you like to ski?</h2>
             <div className="grid grid-cols-2 gap-2">
               {[
-                'Anywhere in Europe',
+                'Anywhere',
                 'France',
                 'Austria',
                 'Switzerland',
@@ -355,18 +354,18 @@ export default function Component() {
                     checked={answers.countries.includes(country)}
                     onCheckedChange={(checked) => {
                       let newCountries: string[];
-                      if (country === 'Anywhere in Europe') {
-                        newCountries = checked ? ['Anywhere in Europe'] : [];
+                      if (country === 'Anywhere') {
+                        newCountries = checked ? ['Anywhere'] : [];
                       } else {
                         if (checked) {
                           newCountries = [
-                            ...answers.countries.filter(c => c !== 'Anywhere in Europe'),
+                            ...answers.countries.filter(c => c !== 'Anywhere'),
                             country
                           ];
                         } else {
                           newCountries = answers.countries.filter(c => c !== country);
                           if (newCountries.length === 0) {
-                            newCountries = ['Anywhere in Europe'];
+                            newCountries = ['Anywhere'];
                           }
                         }
                       }
@@ -700,13 +699,6 @@ export default function Component() {
     const savedData = localStorage.getItem(STORAGE_KEY)
     console.log('Current localStorage data:', savedData ? JSON.parse(savedData) : null)
   }, [pathname]) // Log whenever pathname changes
-
-  useEffect(() => {
-    const currentRoute = questionRoutes[step as keyof typeof questionRoutes]
-    if (currentRoute) {
-      trackQuestionnaireStep(step, currentRoute)
-    }
-  }, [step])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden">
