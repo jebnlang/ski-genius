@@ -82,17 +82,16 @@ interface Resort {
 
 // Function to determine pricing badge style based on price range
 const getPricingBadgeStyle = (price: string | undefined) => {
-  if (!price) return "bg-gray-200 text-gray-700";
+  if (!price) return "bg-gray-100 text-gray-600";
   
-  // Remove currency symbol and convert to number
   const numericPrice = parseFloat(price.replace(/[€$£]/g, ''));
   
   if (numericPrice <= 200) {
-    return "bg-green-100 text-green-800 border-green-200";
-  } else if (numericPrice <= 350) {
-    return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    return "bg-green-50 text-green-700 hover:bg-green-100";
+  } else if (numericPrice <= 300) {
+    return "bg-yellow-50 text-yellow-700 hover:bg-yellow-100";
   } else {
-    return "bg-red-100 text-red-800 border-red-200";
+    return "bg-red-50 text-red-700 hover:bg-red-100";
   }
 };
 
@@ -104,10 +103,25 @@ const getPricingLabel = (price: string | undefined) => {
   
   if (numericPrice <= 200) {
     return "Budget-Friendly";
-  } else if (numericPrice <= 350) {
+  } else if (numericPrice <= 300) {
     return "Mid-Range";
   } else {
     return "Premium";
+  }
+};
+
+// Add this function to get the tooltip text based on price range
+const getPricingTooltip = (price: string | undefined) => {
+  if (!price) return "Pricing information not available";
+  
+  const numericPrice = parseFloat(price.replace(/[€$£]/g, ''));
+  
+  if (numericPrice <= 200) {
+    return "Excellent choice for cost-conscious travelers.";
+  } else if (numericPrice <= 300) {
+    return "Balanced option offering good amenities and services at mid-range prices.";
+  } else {
+    return "High-end resort with premium facilities and services.";
   }
 };
 
@@ -169,99 +183,131 @@ const LoadingCard = () => (
   </Card>
 )
 
-const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => (
-  <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
-    transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10">
-    <button 
-      onClick={onRemove}
-      className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 
-        transition-colors z-20"
-    >
-      <X className="w-4 h-4 text-gray-600" />
-    </button>
-    <CardHeader className="p-4 pb-2">
-      <div className="flex justify-between items-start">
-        <div className="flex items-start gap-2 flex-1">
-          <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
-          <div className="flex gap-2">
-            <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
-              {rank}
-            </Badge>
-            <Badge variant="secondary" className={getPricingBadgeStyle(resort.pricing?.sixDayPass)}>
-              {getPricingLabel(resort.pricing?.sixDayPass)}
-            </Badge>
+const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
+      transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10">
+      <button 
+        onClick={onRemove}
+        className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 
+          transition-colors z-20"
+      >
+        <X className="w-4 h-4 text-gray-600" />
+      </button>
+      <CardHeader className="p-4 pb-2">
+        <div className="flex justify-between items-start">
+          <div className="flex items-start gap-2 flex-1">
+            <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
+            <div className="flex gap-2">
+              <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
+                {rank}
+              </Badge>
+              <TooltipProvider delayDuration={100}>
+                <Tooltip open={showTooltip} onOpenChange={setShowTooltip}>
+                  <TooltipTrigger asChild>
+                    <div className="inline-block">
+                      <Badge 
+                        variant="outline" 
+                        className={`cursor-help transition-colors touch-manipulation ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowTooltip(!showTooltip);
+                        }}
+                        onTouchStart={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        {getPricingLabel(resort.pricing?.sixDayPass)}
+                      </Badge>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent 
+                    side="top" 
+                    className="bg-white text-gray-800 border border-gray-200 p-2 z-50 shadow-lg"
+                    sideOffset={5}
+                    avoidCollisions={true}
+                  >
+                    <p className="text-sm max-w-[200px]">{getPricingTooltip(resort.pricing?.sixDayPass)}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex items-center text-sm text-gray-600 mt-1">
-        <MapPin className="w-3 h-3 mr-1" /> 
-        {resort.location}, {resort.country}
-      </div>
-      
-      <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
-        <span className="text-blue-600 font-semibold mb-2 block">Resort Highlights:</span>
-        <ul className="space-y-2">
-          {resort.highlights.map((highlight, index) => (
-            <li key={index} className="flex items-center text-gray-800">
-               <Mountain className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
-              <span className="text-sm font-medium">{highlight}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {resort.explanation && (
-        <p className="text-sm text-gray-700 italic mt-3">{resort.explanation}</p>
-      )}
-    </CardHeader>
-
-    <CardContent className="p-4 pt-2">
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="col-span-2">
-          <span className="text-gray-600">Slope Distribution:</span>
-          <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
-        </div>
-        <div>
-          <span className="text-gray-600">Km of Runs:</span>
-          <p className="text-gray-800">{resort.skiArea}</p>
-        </div>
-        <div>
-          <span className="text-gray-600">Number of Lifts:</span>
-          <p className="text-gray-800">{resort.numberOfLifts}</p>
-        </div>
-        <div>
-          <span className="text-gray-600">Village Altitude:</span>
-          <p className="text-gray-800">{resort.villageAltitude}</p>
-        </div>
-        <div>
-          <span className="text-gray-600">Ski Range:</span>
-          <p className="text-gray-800">{resort.skiRange}</p>
-        </div>
-        <div>
-          <span className="text-gray-600">Nightlife:</span>
-          <div className="flex items-center">
-            <Martini className="w-3 h-3 mr-1 text-blue-500" />
-            <span className="text-gray-800">{resort.nightlife}</span>
-          </div>
+        <div className="flex items-center text-sm text-gray-600 mt-1">
+          <MapPin className="w-3 h-3 mr-1" /> 
+          {resort.location}, {resort.country}
         </div>
         
-        <div className="col-span-2 mt-2 bg-green-50 rounded-lg p-3 border border-green-100">
-          <span className="text-green-600 font-semibold block mb-2">Lift Pass Pricing:</span>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <span className="text-gray-600">Daily Pass:</span>
-              <p className="text-gray-800 font-medium">{resort.pricing?.dailyPass}</p>
+        <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
+          <span className="text-blue-600 font-semibold mb-2 block">Resort Highlights:</span>
+          <ul className="space-y-2">
+            {resort.highlights.map((highlight, index) => (
+              <li key={index} className="flex items-center text-gray-800">
+                 <Mountain className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
+                <span className="text-sm font-medium">{highlight}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {resort.explanation && (
+          <p className="text-sm text-gray-700 italic mt-3">{resort.explanation}</p>
+        )}
+      </CardHeader>
+
+      <CardContent className="p-4 pt-2">
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="col-span-2">
+            <span className="text-gray-600">Slope Distribution:</span>
+            <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
+          </div>
+          <div>
+            <span className="text-gray-600">Km of Runs:</span>
+            <p className="text-gray-800">{resort.skiArea}</p>
+          </div>
+          <div>
+            <span className="text-gray-600">Number of Lifts:</span>
+            <p className="text-gray-800">{resort.numberOfLifts}</p>
+          </div>
+          <div>
+            <span className="text-gray-600">Village Altitude:</span>
+            <p className="text-gray-800">{resort.villageAltitude}</p>
+          </div>
+          <div>
+            <span className="text-gray-600">Ski Range:</span>
+            <p className="text-gray-800">{resort.skiRange}</p>
+          </div>
+          <div>
+            <span className="text-gray-600">Nightlife:</span>
+            <div className="flex items-center">
+              <Martini className="w-3 h-3 mr-1 text-blue-500" />
+              <span className="text-gray-800">{resort.nightlife}</span>
             </div>
-            <div>
-              <span className="text-gray-600">6-Day Pass:</span>
-              <p className="text-gray-800 font-medium">{resort.pricing?.sixDayPass}</p>
+          </div>
+          
+          <div className="col-span-2 mt-2 bg-green-50 rounded-lg p-3 border border-green-100">
+            <span className="text-green-600 font-semibold block mb-2">Lift Pass Pricing:</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="text-gray-600">Daily Pass:</span>
+                <p className="text-gray-800 font-medium">{resort.pricing?.dailyPass}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">6-Day Pass:</span>
+                <p className="text-gray-800 font-medium">{resort.pricing?.sixDayPass}</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </CardContent>
-  </Card>
-)
+      </CardContent>
+    </Card>
+  )
+}
 const mockResorts: Resort[] = [
   {
     name: "Chamonix",
