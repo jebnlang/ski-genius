@@ -80,6 +80,7 @@ export default function Component() {
 
   const handleStartNewSearch = () => {
     localStorage.removeItem('ski_questionnaire_data')
+    localStorage.removeItem('ski_resort_results')
     router.push('/questionnaire')
   }
 

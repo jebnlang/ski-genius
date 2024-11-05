@@ -184,8 +184,6 @@ const LoadingCard = () => (
 )
 
 const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-
   return (
     <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
       transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10">
@@ -205,25 +203,14 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
                 {rank}
               </Badge>
               <TooltipProvider delayDuration={100}>
-                <Tooltip open={showTooltip} onOpenChange={setShowTooltip}>
+                <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="inline-block">
-                      <Badge 
-                        variant="outline" 
-                        className={`cursor-help transition-colors touch-manipulation ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowTooltip(!showTooltip);
-                        }}
-                        onTouchStart={(e) => {
-                          e.stopPropagation();
-                        }}
-                      >
-                        {getPricingLabel(resort.pricing?.sixDayPass)}
-                      </Badge>
-                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={`cursor-help transition-colors ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
+                    >
+                      {getPricingLabel(resort.pricing?.sixDayPass)}
+                    </Badge>
                   </TooltipTrigger>
                   <TooltipContent 
                     side="top" 
@@ -1076,6 +1063,80 @@ const RefinementDialog = ({
   )
 }
 
+// Add this interface near the top with other interfaces
+interface StoredResults {
+  resorts: Resort[]
+  timestamp: string
+}
+
+// Add these functions before the ResultsPage component
+const RESULTS_STORAGE_KEY = 'ski_resort_results'
+
+const saveResortsToStorage = (resorts: Resort[]) => {
+  const storedData: StoredResults = {
+    resorts,
+    timestamp: new Date().toISOString()
+  }
+  localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(storedData))
+}
+
+// Add this function to compare answers
+const areAnswersEqual = (stored: StorageState['answers'], current: StorageState['answers']): boolean => {
+  // Helper function to compare arrays regardless of order
+  const compareArrays = (arr1: string[], arr2: string[]) => {
+    if (arr1.length !== arr2.length) return false
+    const sorted1 = [...arr1].sort()
+    const sorted2 = [...arr2].sort()
+    return sorted1.every((item, index) => item === sorted2[index])
+  }
+
+  // Compare all relevant fields
+  return (
+    stored.groupType === current.groupType &&
+    compareArrays(stored.childrenAges, current.childrenAges) &&
+    stored.sportType === current.sportType &&
+    compareArrays(stored.countries, current.countries) &&
+    compareArrays(stored.skiingLevels, current.skiingLevels) &&
+    stored.pricingSensitivity === current.pricingSensitivity &&
+    stored.lessons === current.lessons &&
+    stored.nightlife === current.nightlife &&
+    stored.snowPark === current.snowPark &&
+    stored.offPiste === current.offPiste &&
+    stored.skiInSkiOut === current.skiInSkiOut &&
+    compareArrays(stored.resortPreferences, current.resortPreferences) &&
+    compareArrays(stored.slopePreferences, current.slopePreferences) &&
+    compareArrays(stored.otherActivities, current.otherActivities) &&
+    stored.lovedResorts === current.lovedResorts &&
+    stored.travelTime === current.travelTime &&
+    compareArrays(stored.travelMonth, current.travelMonth) &&
+    stored.additionalInfo === current.additionalInfo
+  )
+}
+
+// Update the getResortsFromStorage function to include answer comparison
+const getResortsFromStorage = (currentAnswers: StorageState['answers']): Resort[] | null => {
+  const savedResults = localStorage.getItem(RESULTS_STORAGE_KEY)
+  const savedQuestionnaire = localStorage.getItem('ski_questionnaire_data')
+  
+  if (!savedResults || !savedQuestionnaire) return null
+  
+  try {
+    const { resorts } = JSON.parse(savedResults) as StoredResults
+    const { answers: storedAnswers } = JSON.parse(savedQuestionnaire) as StorageState
+
+    // Only return stored resorts if the answers match exactly
+    if (areAnswersEqual(storedAnswers, currentAnswers)) {
+      return resorts
+    }
+    
+    // If answers don't match, return null to trigger new API call
+    return null
+  } catch (error) {
+    console.error('Error parsing stored data:', error)
+    return null
+  }
+}
+
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -1091,7 +1152,7 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        // Check for localStorage data
+        // Check for questionnaire data first
         const savedData = localStorage.getItem('ski_questionnaire_data')
         if (!savedData) {
           router.push('/questionnaire')
@@ -1101,9 +1162,9 @@ export default function ResultsPage() {
         let parsedData: StorageState
         try {
           parsedData = JSON.parse(savedData)
-          console.log('Parsed questionnaire data:', parsedData); // Debug log
+          console.log('Parsed questionnaire data:', parsedData)
         } catch (e) {
-          console.error('Error parsing localStorage data:', e);
+          console.error('Error parsing localStorage data:', e)
           setError('Error loading your preferences. Please try again.')
           router.push('/questionnaire')
           return
@@ -1111,62 +1172,69 @@ export default function ResultsPage() {
 
         const { answers } = parsedData
 
+        // Check for stored results that match current answers
+        const storedResorts = getResortsFromStorage(answers)
+        if (storedResorts) {
+          console.log('Using stored resort results - answers match exactly')
+          setResorts(storedResorts)
+          setIsLoading(false)
+          return
+        }
+
+        // If no matching stored results, proceed with API call
+        console.log('Fetching new results from API - answers have changed')
         try {
-          console.log('Sending prompt to AI...'); // Debug log
           const completion = await complete(constructPrompt(answers))
-          console.log('Raw AI response:', completion); // Debug log
+          console.log('Raw AI response:', completion)
           
           const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-          console.log('Cleaned AI response:', cleanedCompletion); // Debug log
+          console.log('Cleaned AI response:', cleanedCompletion)
           
           let parsedResorts: Resort[]
           try {
             parsedResorts = JSON.parse(cleanedCompletion)
-            console.log('Parsed resorts:', parsedResorts); // Debug log
+            console.log('Parsed resorts:', parsedResorts)
           } catch (parseError) {
             console.error('Error parsing AI response:', parseError, '\nResponse was:', cleanedCompletion)
             throw new Error('Unable to process resort recommendations')
           }
           
-          // Validate resort data
           if (!Array.isArray(parsedResorts) || parsedResorts.length === 0) {
-            console.error('Invalid or empty resorts array:', parsedResorts);
+            console.error('Invalid or empty resorts array:', parsedResorts)
             throw new Error('No resort recommendations received')
           }
 
-          // Validate that resorts match selected countries
           const validatedResorts = validateResorts(parsedResorts, answers.countries)
-          console.log('Validated resorts:', validatedResorts); // Debug log
+          console.log('Validated resorts:', validatedResorts)
           
           if (validatedResorts.length === 0) {
-            // If no validated resorts, use mock data in development
             if (process.env.NODE_ENV === 'development') {
-              console.log('Using mock data as fallback');
+              console.log('Using mock data as fallback')
               const validatedMockResorts = validateResorts(mockResorts, answers.countries)
               setResorts(validatedMockResorts)
+              saveResortsToStorage(validatedMockResorts) // Save mock resorts
             } else {
               throw new Error('No resorts match your selected countries')
             }
           } else {
             setResorts(validatedResorts)
+            saveResortsToStorage(validatedResorts) // Save real resorts
           }
           
-          // Save to database
           try {
             await saveToDatabase(answers, validatedResorts)
           } catch (dbError) {
             console.error('Database error:', dbError)
-            // Don't throw here - we still want to show results even if save fails
           }
 
         } catch (apiError) {
           console.error('API Error:', apiError)
           setError('Unable to get resort recommendations. Please try again.')
           
-          // Only use mock data in development
           if (process.env.NODE_ENV === 'development') {
             const validatedMockResorts = validateResorts(mockResorts, answers.countries)
             setResorts(validatedMockResorts)
+            saveResortsToStorage(validatedMockResorts) // Save mock resorts
           }
         }
       } finally {
@@ -1181,38 +1249,31 @@ export default function ResultsPage() {
     try {
       setLoadingCards(prev => ({ ...prev, [index]: true }))
       
-      // Get the current resort names to exclude
       const currentResortNames = resorts.map(r => r.name)
-      
-      // Add current resort to seen resorts
       setSeenResorts(prev => new Set([...prev, resorts[index].name]))
       
-      // Get saved data for API call
       const savedData = localStorage.getItem('ski_questionnaire_data')
       if (!savedData) throw new Error('No saved preferences found')
       
       const { answers } = JSON.parse(savedData) as StorageState
       
-      // Modify the prompt to exclude seen resorts
       const excludeList = [...seenResorts, ...currentResortNames].join(', ')
       const modifiedPrompt = constructPrompt(answers) + `\nIMPORTANT: Do NOT suggest any of these resorts: ${excludeList}`
       
-      // Get new resort recommendation
       const completion = await complete(modifiedPrompt)
       const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
       const parsedResorts = JSON.parse(cleanedCompletion)
       
-      // Validate and get first resort from response
       const validatedResorts = validateResorts([parsedResorts[0]], answers.countries)
       
       if (validatedResorts.length === 0) {
         throw new Error('No matching resort found')
       }
 
-      // Update the resorts array with the new resort
       setResorts(prev => {
         const updated = [...prev]
         updated[index] = validatedResorts[0]
+        saveResortsToStorage(updated) // Save updated resorts
         return updated
       })
 
@@ -1223,29 +1284,27 @@ export default function ResultsPage() {
     }
   }
 
-  // Modify the ResultsPage component
+  // Update handlePreferenceUpdate to save changes
   const handlePreferenceUpdate = async (newAnswers: StorageState['answers']) => {
     try {
       setIsLoading(true)
       setError(null)
 
-      // Update localStorage
       const storageData: StorageState = {
         answers: newAnswers,
         lastUpdated: new Date().toISOString(),
-        currentStep: 15 // Last step
+        currentStep: 15
       }
       localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
 
-      // Get new results
       const completion = await complete(constructPrompt(newAnswers))
       const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
       const parsedResorts = JSON.parse(cleanedCompletion)
       const validatedResorts = validateResorts(parsedResorts, newAnswers.countries)
 
       setResorts(validatedResorts)
+      saveResortsToStorage(validatedResorts) // Save new resorts
       
-      // Save to database
       await saveToDatabase(newAnswers, validatedResorts)
 
     } catch (error) {
