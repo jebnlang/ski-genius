@@ -80,6 +80,37 @@ interface Resort {
   }
 }
 
+// Function to determine pricing badge style based on price range
+const getPricingBadgeStyle = (price: string | undefined) => {
+  if (!price) return "bg-gray-200 text-gray-700";
+  
+  // Remove currency symbol and convert to number
+  const numericPrice = parseFloat(price.replace(/[€$£]/g, ''));
+  
+  if (numericPrice <= 200) {
+    return "bg-green-100 text-green-800 border-green-200";
+  } else if (numericPrice <= 350) {
+    return "bg-yellow-100 text-yellow-800 border-yellow-200";
+  } else {
+    return "bg-red-100 text-red-800 border-red-200";
+  }
+};
+
+// Function to get pricing label based on price range
+const getPricingLabel = (price: string | undefined) => {
+  if (!price) return "Price N/A";
+  
+  const numericPrice = parseFloat(price.replace(/[€$£]/g, ''));
+  
+  if (numericPrice <= 200) {
+    return "Budget-Friendly";
+  } else if (numericPrice <= 350) {
+    return "Mid-Range";
+  } else {
+    return "Premium";
+  }
+};
+
 const DifficultyBar = ({ difficulty, runs }: { difficulty: Resort['difficulty'], runs: Resort['runs'] }) => (
   <TooltipProvider>
     <Tooltip>
@@ -152,9 +183,14 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
       <div className="flex justify-between items-start">
         <div className="flex items-start gap-2 flex-1">
           <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
-          <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
-            {rank}
-          </Badge>
+          <div className="flex gap-2">
+            <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
+              {rank}
+            </Badge>
+            <Badge variant="secondary" className={getPricingBadgeStyle(resort.pricing?.sixDayPass)}>
+              {getPricingLabel(resort.pricing?.sixDayPass)}
+            </Badge>
+          </div>
         </div>
       </div>
       <div className="flex items-center text-sm text-gray-600 mt-1">
@@ -167,7 +203,7 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
         <ul className="space-y-2">
           {resort.highlights.map((highlight, index) => (
             <li key={index} className="flex items-center text-gray-800">
-              <Mountain className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
+               <Mountain className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
               <span className="text-sm font-medium">{highlight}</span>
             </li>
           ))}
