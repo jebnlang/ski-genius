@@ -392,6 +392,25 @@ const mockResorts: Resort[] = [
   }
 ]
 
+// Add this constant at the top of the file
+const EUROPEAN_COUNTRIES = [
+  'France',
+  'Austria',
+  'Switzerland',
+  'Italy',
+  'Germany',
+  'Norway',
+  'Sweden',
+  'Spain',
+  'Bulgaria',
+  'Slovenia',
+  'Czech Republic',
+  'Poland',
+  'Finland',
+  'Andorra',
+  'Greece'
+];
+
 // Validation function to check if resorts match selected countries
 const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort[] => {
   console.log('Validating resorts:', resorts);
@@ -455,9 +474,11 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
     return [];
   }
 
-  // If "Anywhere" is selected, return all valid resorts
-  if (selectedCountries.includes("Anywhere")) {
-    return validResorts;
+  // If "Anywhere in Europe" is selected, only return European resorts
+  if (selectedCountries.includes("Anywhere in Europe")) {
+    return validResorts.filter(resort => 
+      EUROPEAN_COUNTRIES.includes(resort.country)
+    );
   }
 
   // Filter resorts by selected countries
@@ -550,15 +571,15 @@ Off-Piste Interest: ${answers.offPiste}
 Ski-in/Ski-out Preference: ${answers.skiInSkiOut}
 
 CRITICAL REQUIREMENTS:
-1. LOCATION REQUIREMENT: ${answers.countries?.includes("Anywhere")
-     ? "User is open to any location that matches their preferences."
+1. LOCATION REQUIREMENT: ${answers.countries?.includes("Anywhere in Europe")
+     ? "User is open to any European resort that matches their preferences. ONLY suggest resorts from European countries."
      : `YOU MUST ONLY SUGGEST RESORTS FROM: ${answers.countries?.join(', ')}. This is a non-negotiable requirement.`}
 
 2. ${pricingGuidance}
 
 3. RESORT SELECTION CRITERIA:
    ${isBudgetFriendly 
-     ? answers.countries?.includes("Anywhere")
+     ? answers.countries?.includes("Anywhere in Europe")
        ? `STRICT BUDGET FOCUS:
           - All suggestions must be from the budget-friendly countries listed above
           - Daily lift pass prices should be under €40
@@ -576,7 +597,7 @@ CRITICAL REQUIREMENTS:
         - Appropriate amenities for group type`}
 
 4. DIVERSE SUGGESTIONS: While maintaining focus on established resorts, provide:
-   ${answers.countries?.includes("Anywhere")
+   ${answers.countries?.includes("Anywhere in Europe")
      ? isBudgetFriendly
        ? `- First resort MUST be from Bulgaria, Serbia, or Poland
           - Second resort MUST be from another budget-friendly country listed above

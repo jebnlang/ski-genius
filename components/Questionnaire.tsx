@@ -332,7 +332,7 @@ export default function Component() {
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Where would you like to ski?</h2>
             <div className="grid grid-cols-2 gap-2">
               {[
-                'Anywhere',
+                'Anywhere in Europe',
                 'France',
                 'Austria',
                 'Switzerland',
@@ -355,18 +355,18 @@ export default function Component() {
                     checked={answers.countries.includes(country)}
                     onCheckedChange={(checked) => {
                       let newCountries: string[];
-                      if (country === 'Anywhere') {
-                        newCountries = checked ? ['Anywhere'] : [];
+                      if (country === 'Anywhere in Europe') {
+                        newCountries = checked ? ['Anywhere in Europe'] : [];
                       } else {
                         if (checked) {
                           newCountries = [
-                            ...answers.countries.filter(c => c !== 'Anywhere'),
+                            ...answers.countries.filter(c => c !== 'Anywhere in Europe'),
                             country
                           ];
                         } else {
                           newCountries = answers.countries.filter(c => c !== country);
                           if (newCountries.length === 0) {
-                            newCountries = ['Anywhere'];
+                            newCountries = ['Anywhere in Europe'];
                           }
                         }
                       }
