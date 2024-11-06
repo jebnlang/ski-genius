@@ -1260,11 +1260,24 @@ const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => 
     return resorts
   }
 }
+// First, add this interface near the top of the file with other interfaces
+interface WindowWithGtag extends Window {
+  gtag: (
+    command: string,
+    target: string,
+    config?: {
+      resort_name?: string;
+      event_category?: string;
+      event_label?: string;
+      [key: string]: any;
+    }
+  ) => void;
+}
 
-// Add this function to track website clicks
+// Then update the trackResortWebsiteClick function to use the proper typing
 const trackResortWebsiteClick = (resortName: string) => {
   if (typeof window !== 'undefined' && 'gtag' in window) {
-    (window as any).gtag('event', 'resort_website_click', {
+    ((window as unknown) as WindowWithGtag).gtag('event', 'resort_website_click', {
       resort_name: resortName,
       event_category: 'outbound_link',
       event_label: resortName,
