@@ -1276,12 +1276,12 @@ interface WindowWithGtag extends Window {
 
 // Then update the trackResortWebsiteClick function to use the proper typing
 const trackResortWebsiteClick = (resortName: string) => {
-  if (typeof window !== 'undefined' && 'gtag' in window) {
-    ((window as unknown) as WindowWithGtag).gtag('event', 'resort_website_click', {
+  if (typeof window !== 'undefined') {
+    window.gtag('event', 'resort_website_click', {
       resort_name: resortName,
       event_category: 'outbound_link',
       event_label: resortName,
-    })
+    });
   }
 }
 
