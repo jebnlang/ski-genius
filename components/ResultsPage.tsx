@@ -80,6 +80,7 @@ interface Resort {
     dailyPass: string
     sixDayPass: string
   }
+  website?: string
 }
 
 // Function to determine pricing badge style based on price range
@@ -188,7 +189,8 @@ const LoadingCard = () => (
 const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => {
   return (
     <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
-      transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10">
+      transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10
+      flex flex-col min-h-[800px]">
       <button 
         onClick={onRemove}
         className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 
@@ -196,90 +198,93 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
       >
         <X className="w-4 h-4 text-gray-600" />
       </button>
-      <CardHeader className="p-4 pb-2">
-        <div className="flex justify-between items-start">
-          <div className="flex items-start gap-2 flex-1">
-            <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
-            <div className="flex gap-2">
-              <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
-                {rank}
-              </Badge>
-              <TooltipProvider delayDuration={100}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge 
-                      variant="outline" 
-                      className={`cursor-help transition-colors ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
+
+      <div className="flex-1">
+        <CardHeader className="p-6 pb-2">
+          <div className="flex justify-between items-start">
+            <div className="flex items-start gap-2 flex-1">
+              <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
+              <div className="flex gap-2">
+                <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
+                  {rank}
+                </Badge>
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge 
+                        variant="outline" 
+                        className={`cursor-help transition-colors ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
+                      >
+                        {getPricingLabel(resort.pricing?.sixDayPass)}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="top" 
+                      className="bg-white text-gray-800 border border-gray-200 p-2 z-50 shadow-lg"
+                      sideOffset={5}
+                      avoidCollisions={true}
                     >
-                      {getPricingLabel(resort.pricing?.sixDayPass)}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent 
-                    side="top" 
-                    className="bg-white text-gray-800 border border-gray-200 p-2 z-50 shadow-lg"
-                    sideOffset={5}
-                    avoidCollisions={true}
-                  >
-                    <p className="text-sm max-w-[200px]">{getPricingTooltip(resort.pricing?.sixDayPass)}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                      <p className="text-sm max-w-[200px]">{getPricingTooltip(resort.pricing?.sixDayPass)}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center text-sm text-gray-600 mt-1">
-          <MapPin className="w-3 h-3 mr-1" /> 
-          {resort.location}, {resort.country}
-        </div>
-        
-        <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
-          <span className="text-blue-600 font-semibold mb-2 block">Resort Highlights:</span>
-          <ul className="space-y-2">
-            {resort.highlights.map((highlight, index) => (
-              <li key={index} className="flex items-center text-gray-800">
-                 <Mountain className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
-                <span className="text-sm font-medium">{highlight}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+          <div className="flex items-center text-sm text-gray-600 mt-1">
+            <MapPin className="w-3 h-3 mr-1" /> 
+            {resort.location}, {resort.country}
+          </div>
+          
+          <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
+            <span className="text-blue-600 font-semibold mb-2 block">Resort Highlights:</span>
+            <ul className="space-y-2">
+              {resort.highlights.map((highlight, index) => (
+                <li key={index} className="flex items-center text-gray-800">
+                   <Mountain className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
+                  <span className="text-sm font-medium">{highlight}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        {resort.explanation && (
-          <p className="text-sm text-gray-700 italic mt-3">{resort.explanation}</p>
-        )}
-      </CardHeader>
+          {resort.explanation && (
+            <p className="text-sm text-gray-700 italic mt-3">{resort.explanation}</p>
+          )}
+        </CardHeader>
 
-      <CardContent className="p-4 pt-2">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="col-span-2">
-            <span className="text-gray-600">Slope Distribution:</span>
-            <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
-          </div>
-          <div>
-            <span className="text-gray-600">Km of Runs:</span>
-            <p className="text-gray-800">{resort.skiArea}</p>
-          </div>
-          <div>
-            <span className="text-gray-600">Number of Lifts:</span>
-            <p className="text-gray-800">{resort.numberOfLifts}</p>
-          </div>
-          <div>
-            <span className="text-gray-600">Village Altitude:</span>
-            <p className="text-gray-800">{resort.villageAltitude}</p>
-          </div>
-          <div>
-            <span className="text-gray-600">Ski Range:</span>
-            <p className="text-gray-800">{resort.skiRange}</p>
-          </div>
-          <div>
-            <span className="text-gray-600">Nightlife:</span>
-            <div className="flex items-center">
-              <Martini className="w-3 h-3 mr-1 text-blue-500" />
-              <span className="text-gray-800">{resort.nightlife}</span>
+        <CardContent className="p-6 pt-2">
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="col-span-2">
+              <span className="text-gray-600">Slope Distribution:</span>
+              <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
+            </div>
+            <div>
+              <span className="text-gray-600">Km of Runs:</span>
+              <p className="text-gray-800">{resort.skiArea}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Number of Lifts:</span>
+              <p className="text-gray-800">{resort.numberOfLifts}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Village Altitude:</span>
+              <p className="text-gray-800">{resort.villageAltitude}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Ski Range:</span>
+              <p className="text-gray-800">{resort.skiRange}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Nightlife:</span>
+              <div className="flex items-center">
+                <Martini className="w-3 h-3 mr-1 text-blue-500" />
+                <span className="text-gray-800">{resort.nightlife}</span>
+              </div>
             </div>
           </div>
           
-          <div className="col-span-2 mt-2 bg-green-50 rounded-lg p-3 border border-green-100">
+          <div className="col-span-2 mt-6 bg-green-50 rounded-lg p-3 border border-green-100">
             <span className="text-green-600 font-semibold block mb-2">Lift Pass Pricing:</span>
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -292,8 +297,43 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
               </div>
             </div>
           </div>
-        </div>
-      </CardContent>
+        </CardContent>
+      </div>
+
+      <div className="p-6 mt-auto">
+        <a
+          href={resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            trackResortWebsiteClick(resort.name)
+          }}
+          className="block w-full bg-gradient-to-r from-blue-500 to-blue-600 
+            hover:from-blue-600 hover:to-blue-700 text-white font-semibold 
+            rounded-full px-6 py-3.5 shadow-lg transform transition-all duration-300 
+            hover:shadow-blue-400/30 hover:shadow-xl hover:-translate-y-1
+            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+            active:translate-y-0"
+        >
+          <div className="flex items-center justify-center space-x-2">
+            <span>Book Your Ski Trip</span>
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-5 w-5" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </div>
+        </a>
+      </div>
     </Card>
   )
 }
@@ -327,7 +367,8 @@ const mockResorts: Resort[] = [
     pricing: {
       dailyPass: "$50",
       sixDayPass: "$250"
-    }
+    },
+    website: "https://www.chamonix.com",
   },
   {
     name: "Zermatt",
@@ -358,7 +399,8 @@ const mockResorts: Resort[] = [
     pricing: {
       dailyPass: "$60",
       sixDayPass: "$300"
-    }
+    },
+    website: "https://www.zermatt.ch",
   },
   {
     name: "St. Moritz",
@@ -389,7 +431,8 @@ const mockResorts: Resort[] = [
     pricing: {
       dailyPass: "$70",
       sixDayPass: "$350"
-    }
+    },
+    website: "https://www.stmoritz.ch",
   }
 ]
 
@@ -462,7 +505,8 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
     snow_condition: resort.snow_condition || 'Packed',
     villageAltitude: resort.villageAltitude || 'N/A',
     skiRange: resort.skiRange || 'N/A',
-    numberOfLifts: resort.numberOfLifts || 0
+    numberOfLifts: resort.numberOfLifts || 0,
+    website: resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`
   })).filter(isValidResort);
 
   console.log('Valid resorts after basic validation:', validResorts);
@@ -1214,6 +1258,17 @@ const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => 
   } catch (error) {
     console.error('Error in validation process:', error)
     return resorts
+  }
+}
+
+// Add this function to track website clicks
+const trackResortWebsiteClick = (resortName: string) => {
+  if (typeof window !== 'undefined' && 'gtag' in window) {
+    (window as any).gtag('event', 'resort_website_click', {
+      resort_name: resortName,
+      event_category: 'outbound_link',
+      event_label: resortName,
+    })
   }
 }
 
