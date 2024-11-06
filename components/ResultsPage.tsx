@@ -1345,7 +1345,7 @@ export default function ResultsPage() {
       
       const completion = await complete(modifiedPrompt)
       const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-      let parsedResorts = JSON.parse(cleanedCompletion)
+      const parsedResorts = JSON.parse(cleanedCompletion)
       
       // Validate structure first
       let validatedResorts = validateResorts([parsedResorts[0]], answers.countries)
