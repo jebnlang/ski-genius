@@ -81,6 +81,7 @@ interface Resort {
     sixDayPass: string
   }
   website?: string
+  homepage_url?: string
 }
 
 // Function to determine pricing badge style based on price range
@@ -187,6 +188,14 @@ const LoadingCard = () => (
 )
 
 const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => {
+  const finalUrl = resort.homepage_url || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`;
+  
+  console.log('Resort card URL info:', {
+    resortName: resort.name,
+    homepage_url: resort.homepage_url,
+    finalUrl: finalUrl
+  });
+
   return (
     <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
       transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10
@@ -302,11 +311,15 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
 
       <div className="p-6 mt-auto">
         <a
-          href={resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`}
+          href={finalUrl}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => {
-            trackResortWebsiteClick(resort.name)
+            console.log('Clicked resort link:', {
+              resort: resort.name,
+              url: finalUrl
+            });
+            trackResortWebsiteClick(resort.name);
           }}
           className="block w-full bg-gradient-to-r from-blue-500 to-blue-600 
             hover:from-blue-600 hover:to-blue-700 text-white font-semibold 
@@ -1190,8 +1203,8 @@ const areAnswersEqual = (stored: StorageState['answers'], current: StorageState[
   )
 }
 
-// Update the getResortsFromStorage function to include answer comparison
-const getResortsFromStorage = (currentAnswers: StorageState['answers']): Resort[] | null => {
+// Update the getResortsFromStorage function
+const getResortsFromStorage = async (currentAnswers: StorageState['answers']): Promise<Resort[] | null> => {
   const savedResults = localStorage.getItem(RESULTS_STORAGE_KEY)
   const savedQuestionnaire = localStorage.getItem('ski_questionnaire_data')
   
@@ -1201,9 +1214,11 @@ const getResortsFromStorage = (currentAnswers: StorageState['answers']): Resort[
     const { resorts } = JSON.parse(savedResults) as StoredResults
     const { answers: storedAnswers } = JSON.parse(savedQuestionnaire) as StorageState
 
-    // Only return stored resorts if the answers match exactly
+    // Only proceed with stored resorts if the answers match exactly
     if (areAnswersEqual(storedAnswers, currentAnswers)) {
-      return resorts
+      // Validate stored resorts against database
+      const validatedResorts = await validateAgainstDatabase(resorts);
+      return validatedResorts;
     }
     
     // If answers don't match, return null to trigger new API call
@@ -1214,52 +1229,135 @@ const getResortsFromStorage = (currentAnswers: StorageState['answers']): Resort[
   }
 }
 
-// Update the interface to match your actual table structure
+// Add this interface near the top with other interfaces
 interface ValidationResort {
-  resort_name: string
+  resort_name: string;
+  homepage_url: string;
 }
 
-// Simplified validation function that only checks resort names
-const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => {
+// Add this function before the ResultsPage component
+const getResortUrl = async (resortName: string): Promise<string | null> => {
   try {
-    const { data: validationList, error } = await supabase
+    const { data, error } = await supabase
       .from('ski_resorts_validation_list')
-      .select('resort_name')
+      .select('homepage_url')
+      .ilike('resort_name', resortName)
+      .single();
 
     if (error) {
-      console.error('Error fetching validation list:', error)
-      return resorts
+      console.error('Error fetching resort URL:', error);
+      return null;
     }
 
-    const fuseOptions = {
-      includeScore: true,
-      threshold: 0.3,  // 70% similarity
-      keys: ['resort_name']
+    return data?.homepage_url || null;
+  } catch (error) {
+    console.error('Error in getResortUrl:', error);
+    return null;
+  }
+};
+
+// Update the validateAgainstDatabase function
+const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => {
+  try {
+    console.log('Starting database validation for resorts:', resorts.map(r => r.name));
+
+    // First, let's check if we can connect to the database
+    const { data: testConnection, error: testError } = await supabase
+      .from('ski_resorts_validation_list')
+      .select('count');
+
+    if (testError) {
+      console.error('Database connection test failed:', testError);
+      return resorts;
     }
-    const fuse = new Fuse(validationList, fuseOptions)
+
+    console.log('Database connection successful');
+
+    // Now fetch all resorts at once instead of making multiple queries
+    const { data: validationList, error } = await supabase
+      .from('ski_resorts_validation_list')
+      .select('resort_name, homepage_url');
+
+    if (error) {
+      console.error('Error fetching validation list:', error);
+      return resorts;
+    }
+
+    if (!validationList || validationList.length === 0) {
+      console.error('No validation data received from database');
+      return resorts;
+    }
+
+    console.log(`Found ${validationList.length} resorts in validation list`);
+    console.log('Sample of validation data:', validationList.slice(0, 3));
+
+    // Create a map for faster lookups
+    const resortMap = new Map(
+      validationList.map(item => [item.resort_name.toLowerCase(), item])
+    );
 
     const validatedResorts = resorts.map(resort => {
-      const matches = fuse.search(resort.name)
-      const bestMatch = matches[0]
-      
-      if (bestMatch && bestMatch.score && bestMatch.score < 0.3) {
-        // Create a new resort object with the exact name from the database
+      console.log(`\nValidating resort: ${resort.name}`);
+
+      // Try exact match first (case insensitive)
+      const exactMatch = resortMap.get(resort.name.toLowerCase());
+      if (exactMatch) {
+        console.log('Found exact match:', exactMatch);
         return {
           ...resort,
-          name: bestMatch.item.resort_name  // Use the exact name from database
-        }
+          name: exactMatch.resort_name,
+          homepage_url: exactMatch.homepage_url
+        };
       }
-      return null
-    }).filter((resort): resort is Resort => resort !== null)
 
-    console.log('Resorts after validation:', validatedResorts)
-    return validatedResorts
+      // Try partial matches
+      const partialMatches = validationList.filter(item => 
+        item.resort_name.toLowerCase().includes(resort.name.toLowerCase()) ||
+        resort.name.toLowerCase().includes(item.resort_name.toLowerCase())
+      );
+
+      if (partialMatches.length > 0) {
+        console.log('Found partial match:', partialMatches[0]);
+        return {
+          ...resort,
+          name: partialMatches[0].resort_name,
+          homepage_url: partialMatches[0].homepage_url
+        };
+      }
+
+      // Try fuzzy matching as a last resort
+      const fuse = new Fuse(validationList, {
+        keys: ['resort_name'],
+        threshold: 0.3
+      });
+
+      const fuzzyMatches = fuse.search(resort.name);
+      if (fuzzyMatches.length > 0) {
+        console.log('Found fuzzy match:', fuzzyMatches[0].item);
+        return {
+          ...resort,
+          name: fuzzyMatches[0].item.resort_name,
+          homepage_url: fuzzyMatches[0].item.homepage_url
+        };
+      }
+
+      console.log('No match found for:', resort.name);
+      return resort;
+    });
+
+    console.log('Final validated resorts:', validatedResorts.map(r => ({
+      name: r.name,
+      homepage_url: r.homepage_url
+    })));
+
+    return validatedResorts;
 
   } catch (error) {
-    console.error('Error in validation process:', error)
-    return resorts
+    console.error('Error in validation process:', error);
+    return resorts;
   }
-}
+};
+
 // First, add this interface near the top of the file with other interfaces
 interface WindowWithGtag extends Window {
   gtag: (
@@ -1321,7 +1419,7 @@ export default function ResultsPage() {
         const { answers } = parsedData
 
         // Check for stored results that match current answers
-        const storedResorts = getResortsFromStorage(answers)
+        const storedResorts = await getResortsFromStorage(answers)
         if (storedResorts) {
           console.log('Using stored resort results - answers match exactly')
           setResorts(storedResorts)
@@ -1352,25 +1450,19 @@ export default function ResultsPage() {
             throw new Error('No resort recommendations received')
           }
 
-          const validatedResorts = validateResorts(parsedResorts, answers.countries)
-          console.log('Validated resorts:', validatedResorts)
+          // First validate the basic resort structure
+          const basicValidatedResorts = validateResorts(parsedResorts, answers.countries)
+          console.log('Basic validated resorts:', basicValidatedResorts)
           
-          if (validatedResorts.length === 0) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Using mock data as fallback')
-              const validatedMockResorts = validateResorts(mockResorts, answers.countries)
-              setResorts(validatedMockResorts)
-              saveResortsToStorage(validatedMockResorts) // Save mock resorts
-            } else {
-              throw new Error('No resorts match your selected countries')
-            }
-          } else {
-            setResorts(validatedResorts)
-            saveResortsToStorage(validatedResorts) // Save real resorts
-          }
+          // Then validate against the database to get URLs
+          const fullyValidatedResorts = await validateAgainstDatabase(basicValidatedResorts)
+          console.log('Fully validated resorts with URLs:', fullyValidatedResorts)
+          
+          setResorts(fullyValidatedResorts)
+          saveResortsToStorage(fullyValidatedResorts) // Save the fully validated resorts
           
           try {
-            await saveToDatabase(answers, validatedResorts)
+            await saveToDatabase(answers, fullyValidatedResorts)
           } catch (dbError) {
             console.error('Database error:', dbError)
           }
@@ -1380,11 +1472,14 @@ export default function ResultsPage() {
           setError('Unable to get resort recommendations. Please try again.')
           
           if (process.env.NODE_ENV === 'development') {
-            const validatedMockResorts = validateResorts(mockResorts, answers.countries)
-            setResorts(validatedMockResorts)
-            saveResortsToStorage(validatedMockResorts) // Save mock resorts
+            const mockValidatedResorts = await validateAgainstDatabase(mockResorts)
+            setResorts(mockValidatedResorts)
+            saveResortsToStorage(mockValidatedResorts)
           }
         }
+      } catch (error) {
+        console.error('Fetch results error:', error)
+        setError('An error occurred while loading results')
       } finally {
         setIsLoading(false)
       }
