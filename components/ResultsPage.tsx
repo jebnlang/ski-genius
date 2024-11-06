@@ -1269,7 +1269,7 @@ interface WindowWithGtag extends Window {
       resort_name?: string;
       event_category?: string;
       event_label?: string;
-      [key: string]: any;
+      [key: string]: unknown;
     }
   ) => void;
 }
