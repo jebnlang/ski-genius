@@ -1191,17 +1191,24 @@ const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => 
 
     const fuseOptions = {
       includeScore: true,
-      threshold: 0.3,
+      threshold: 0.3,  // 70% similarity
       keys: ['resort_name']
     }
     const fuse = new Fuse(validationList, fuseOptions)
 
-    const validatedResorts = resorts.filter(resort => {
+    const validatedResorts = resorts.map(resort => {
       const matches = fuse.search(resort.name)
       const bestMatch = matches[0]
       
-      return bestMatch && bestMatch.score && bestMatch.score < 0.3
-    })
+      if (bestMatch && bestMatch.score && bestMatch.score < 0.3) {
+        // Create a new resort object with the exact name from the database
+        return {
+          ...resort,
+          name: bestMatch.item.resort_name  // Use the exact name from database
+        }
+      }
+      return null
+    }).filter((resort): resort is Resort => resort !== null)
 
     console.log('Resorts after validation:', validatedResorts)
     return validatedResorts
