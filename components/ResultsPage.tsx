@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { trackResortView, trackResortRemoval, trackSearchRefinement } from '@/utils/analytics'
+import Fuse from 'fuse.js'
 
 // Define all necessary types
 interface StorageState {
@@ -1171,6 +1172,46 @@ const getResortsFromStorage = (currentAnswers: StorageState['answers']): Resort[
   }
 }
 
+// Update the interface to match your actual table structure
+interface ValidationResort {
+  resort_name: string
+}
+
+// Simplified validation function that only checks resort names
+const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => {
+  try {
+    const { data: validationList, error } = await supabase
+      .from('ski_resorts_validation_list')
+      .select('resort_name')
+
+    if (error) {
+      console.error('Error fetching validation list:', error)
+      return resorts
+    }
+
+    const fuseOptions = {
+      includeScore: true,
+      threshold: 0.3,
+      keys: ['resort_name']
+    }
+    const fuse = new Fuse(validationList, fuseOptions)
+
+    const validatedResorts = resorts.filter(resort => {
+      const matches = fuse.search(resort.name)
+      const bestMatch = matches[0]
+      
+      return bestMatch && bestMatch.score && bestMatch.score < 0.3
+    })
+
+    console.log('Resorts after validation:', validatedResorts)
+    return validatedResorts
+
+  } catch (error) {
+    console.error('Error in validation process:', error)
+    return resorts
+  }
+}
+
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -1229,7 +1270,7 @@ export default function ResultsPage() {
             parsedResorts = JSON.parse(cleanedCompletion)
             console.log('Parsed resorts:', parsedResorts)
           } catch (parseError) {
-            console.error('Error parsing AI response:', parseError, '\nResponse was:', cleanedCompletion)
+            console.error('Error parsing AI response:', parseError)
             throw new Error('Unable to process resort recommendations')
           }
           
@@ -1297,18 +1338,22 @@ export default function ResultsPage() {
       
       const completion = await complete(modifiedPrompt)
       const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-      const parsedResorts = JSON.parse(cleanedCompletion)
+      let parsedResorts = JSON.parse(cleanedCompletion)
       
-      const validatedResorts = validateResorts([parsedResorts[0]], answers.countries)
+      // Validate structure first
+      let validatedResorts = validateResorts([parsedResorts[0]], answers.countries)
+      
+      // Then validate against database
+      validatedResorts = await validateAgainstDatabase(validatedResorts)
       
       if (validatedResorts.length === 0) {
-        throw new Error('No matching resort found')
+        throw new Error('No valid resort found in our database')
       }
 
       setResorts(prev => {
         const updated = [...prev]
         updated[index] = validatedResorts[0]
-        saveResortsToStorage(updated) // Save updated resorts
+        saveResortsToStorage(updated)
         return updated
       })
 
