@@ -441,7 +441,6 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
       highlights: Array.isArray(resort.highlights)
     };
 
-    // Log which fields are invalid
     const invalidFields = Object.entries(requiredFields)
       .filter(([_, isValid]) => !isValid)
       .map(([field]) => field);
@@ -453,14 +452,12 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
     return Object.values(requiredFields).every(Boolean);
   };
 
-  // Filter out invalid resorts
+  // Filter out invalid resorts and ensure required fields
   const validResorts = resorts.map(resort => ({
     ...resort,
-    // Ensure nightlife is one of the valid values
     nightlife: ['Vibrant', 'Moderate', 'Quiet'].includes(resort.nightlife) 
       ? resort.nightlife 
       : 'Moderate',
-    // Ensure required fields exist
     pricing: resort.pricing || { dailyPass: 'N/A', sixDayPass: 'N/A' },
     snow_condition: resort.snow_condition || 'Packed',
     villageAltitude: resort.villageAltitude || 'N/A',
@@ -475,22 +472,23 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
     return [];
   }
 
-  // If "Anywhere in Europe" is selected, only return European resorts
-  if (selectedCountries.includes("Anywhere in Europe")) {
-    return validResorts.filter(resort => 
-      EUROPEAN_COUNTRIES.includes(resort.country)
-    );
+  // If "Anywhere in Europe" is selected or no specific countries selected, 
+  // return all valid resorts since they're all European anyway
+  if (selectedCountries.includes("Anywhere in Europe") || selectedCountries.length === 0) {
+    console.log('Returning all valid resorts for Anywhere in Europe');
+    return validResorts;
   }
 
-  // Filter resorts by selected countries
+  // Filter by specific countries if selected
   const countryMatchedResorts = validResorts.filter(resort => 
     selectedCountries.includes(resort.country)
   );
 
   console.log('Country matched resorts:', countryMatchedResorts);
 
-  // If no country matches found, return all valid resorts
+  // If no matches found for specific countries, return all valid resorts
   if (countryMatchedResorts.length === 0) {
+    console.log('No country matches found, returning all valid resorts');
     return validResorts;
   }
 
