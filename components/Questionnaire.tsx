@@ -415,7 +415,7 @@ export default function Component() {
       case 5:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">What's your budget preference?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">What&apos;s your budget preference?</h2>
             <RadioGroup value={answers.pricingSensitivity} onValueChange={(value) => updateAnswers({ pricingSensitivity: value })}>
               {[
                 'Flexible',
@@ -466,7 +466,7 @@ export default function Component() {
               Is having a snow park important?
               {isBeginnerOnly(answers.skiingLevels) && step !== 8 && (
                 <span className="block text-sm font-normal text-gray-600 mt-2">
-                  This question is less relevant for beginners, but you can still answer if you'd like.
+                  This question is less relevant for beginners, but you can still answer if you&apos;d like.
                 </span>
               )}
               <div className="relative inline-block">
@@ -523,7 +523,7 @@ export default function Component() {
               How important is having off-piste possibilities?
               {isBeginnerOnly(answers.skiingLevels) && step !== 9 && (
                 <span className="block text-sm font-normal text-gray-600 mt-2">
-                  This question is less relevant for beginners, but you can still answer if you'd like.
+                  This question is less relevant for beginners, but you can still answer if you&apos;d like.
                 </span>
               )}
               <span className="inline-block relative ml-1">
