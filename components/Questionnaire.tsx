@@ -14,11 +14,11 @@ interface Answers {
   sportType: string
   countries: string[]
   skiingLevels: string[]
+  snowPark: string
+  offPiste: string
   pricingSensitivity: string
   lessons: string
   nightlife: string
-  snowPark: string
-  offPiste: string
   skiInSkiOut: string
   resortPreferences: string[]
   otherActivities: string[]
@@ -33,11 +33,11 @@ const defaultAnswers: Answers = {
   sportType: '',
   countries: ['Anywhere in Europe'],
   skiingLevels: [],
+  snowPark: '',
+  offPiste: '',
   pricingSensitivity: 'Flexible',
   lessons: '',
   nightlife: '',
-  snowPark: '',
-  offPiste: '',
   skiInSkiOut: '',
   resortPreferences: [],
   otherActivities: [],
@@ -80,15 +80,27 @@ const useQuestionnaireState = () => {
     setAnswers((prevAnswers): Answers => {
       let newAnswers = { ...prevAnswers, ...updates };
 
-      // If updating skiing levels and they're all beginners, set defaults for questions 8 and 9
-      if (updates.skiingLevels && isBeginnerOnly(updates.skiingLevels)) {
-        newAnswers = {
-          ...newAnswers,
-          snowPark: 'Not important',
-          offPiste: 'Not important'
-        };
+      // If updating skiing levels, handle the follow-up questions appropriately
+      if (updates.skiingLevels) {
+        if (isBeginnerOnly(updates.skiingLevels)) {
+          // For beginners, set default values
+          newAnswers = {
+            ...newAnswers,
+            snowPark: 'Not important',
+            offPiste: 'Not important'
+          };
+        } else if (!hasAdvancedSkiers(updates.skiingLevels)) {
+          // If no advanced/intermediate skiers, reset follow-up answers
+          newAnswers = {
+            ...newAnswers,
+            snowPark: '',
+            offPiste: ''
+          };
+        }
+        // If has advanced skiers, keep existing snowPark and offPiste values
       }
 
+      // Save to localStorage
       const storageData: StorageState = {
         answers: newAnswers,
         lastUpdated: new Date().toISOString(),
@@ -173,13 +185,11 @@ const questionRoutes = {
   5: 'pricing-sensitivity',
   6: 'lessons',
   7: 'nightlife',
-  8: 'snow-park',
-  9: 'off-piste',
-  10: 'ski-in-ski-out',
-  11: 'resort-preferences',
-  12: 'activities',
-  13: 'travel-time',
-  14: 'additional-info'
+  8: 'ski-in-ski-out',
+  9: 'resort-preferences',
+  10: 'activities',
+  11: 'travel-time',
+  12: 'additional-info'
 }
 
 // Reverse mapping to get step number from route
@@ -193,6 +203,13 @@ const isBeginnerOnly = (skiingLevels: string[]): boolean => {
   return skiingLevels.every(level => 
     level === 'First timers' || level === 'Beginners'
   ) && skiingLevels.length > 0;
+};
+
+// Helper function to check if the group has advanced skiers
+const hasAdvancedSkiers = (skiingLevels: string[]): boolean => {
+  return skiingLevels.some(level => 
+    level === 'Intermediates' || level === 'Advanced'
+  );
 };
 
 export default function Component() {
@@ -252,24 +269,24 @@ export default function Component() {
     }
   }
 
-  const totalSteps = 14
+  const totalSteps = 12
 
   const isQuestionAnswered = () => {
     switch (step) {
       case 1: return !!answers.groupType
       case 2: return !!answers.sportType
       case 3: return answers.countries && answers.countries.length > 0 && answers.countries[0] !== ''
-      case 4: return answers.skiingLevels.length > 0
+      case 4: return answers.skiingLevels.length > 0 && 
+        (!hasAdvancedSkiers(answers.skiingLevels) || 
+         (!!answers.snowPark && !!answers.offPiste))
       case 5: return !!answers.pricingSensitivity
       case 6: return !!answers.lessons
       case 7: return !!answers.nightlife
-      case 8: return !!answers.snowPark
-      case 9: return !!answers.offPiste
-      case 10: return !!answers.skiInSkiOut
-      case 11: return answers.resortPreferences.length > 0
-      case 12: return answers.otherActivities.length > 0
-      case 13: return !!answers.travelTime && (answers.travelTime === 'flexible' || answers.travelMonth.length > 0)
-      case 14: return true
+      case 8: return !!answers.skiInSkiOut
+      case 9: return answers.resortPreferences.length > 0
+      case 10: return answers.otherActivities.length > 0
+      case 11: return !!answers.travelTime && (answers.travelTime === 'flexible' || answers.travelMonth.length > 0)
+      case 12: return true
       default: return false
     }
   }
@@ -410,6 +427,39 @@ export default function Component() {
                 </div>
               ))}
             </div>
+
+            {/* Show follow-up questions if intermediate or advanced levels are selected */}
+            {hasAdvancedSkiers(answers.skiingLevels) && (
+              <div className="mt-8 space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-gray-800">
+                    Is having a snow park important?
+                  </h3>
+                  <RadioGroup value={answers.snowPark} onValueChange={(value) => updateAnswers({ snowPark: value })}>
+                    {['Very important', 'Somewhat important', 'Not important'].map((option) => (
+                      <div key={option} className="flex items-center space-x-2">
+                        <RadioGroupItem value={option} id={`snowpark-${option}`} className="border-blue-500 text-blue-500" />
+                        <Label htmlFor={`snowpark-${option}`} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-gray-800">
+                    How important is having off-piste possibilities?
+                  </h3>
+                  <RadioGroup value={answers.offPiste} onValueChange={(value) => updateAnswers({ offPiste: value })}>
+                    {['Very important', 'Somewhat important', 'Not important'].map((option) => (
+                      <div key={option} className="flex items-center space-x-2">
+                        <RadioGroupItem value={option} id={`offpiste-${option}`} className="border-blue-500 text-blue-500" />
+                        <Label htmlFor={`offpiste-${option}`} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+              </div>
+            )}
           </div>
         )
       case 5:
@@ -461,120 +511,6 @@ export default function Component() {
         )
       case 8:
         return (
-          <div className={`space-y-4 ${isBeginnerOnly(answers.skiingLevels) && step !== 8 ? 'opacity-50' : ''}`}>
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">
-              Is having a snow park important?
-              {isBeginnerOnly(answers.skiingLevels) && step !== 8 && (
-                <span className="block text-sm font-normal text-gray-600 mt-2">
-                  This question is less relevant for beginners, but you can still answer if you&apos;d like.
-                </span>
-              )}
-              <div className="relative inline-block">
-                <div className="cursor-help group">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" 
-                    viewBox="0 0 24 24" 
-                    fill="currentColor"
-                  >
-                    <path 
-                      fillRule="evenodd" 
-                      d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z"
-                      clipRule="evenodd" 
-                    />
-                  </svg>
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900/80 text-white text-sm rounded-lg w-64 text-center z-50">
-                    A snow park is an area with jumps, rails, and other features for tricks.
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-900/80 transform rotate-45"></div>
-                  </div>
-                </div>
-              </div>
-            </h2>
-            <RadioGroup 
-              value={answers.snowPark} 
-              onValueChange={(value) => updateAnswers({ snowPark: value })}
-              disabled={isBeginnerOnly(answers.skiingLevels) && step !== 8}
-            >
-              {['Very important', 'Somewhat important', 'Not important'].map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem 
-                    value={option} 
-                    id={option} 
-                    className="border-blue-500 text-blue-500"
-                    disabled={isBeginnerOnly(answers.skiingLevels) && step !== 8}
-                  />
-                  <Label 
-                    htmlFor={option} 
-                    className={`text-gray-800 hover:text-blue-500 transition-colors ${
-                      isBeginnerOnly(answers.skiingLevels) && step !== 8 ? 'opacity-50' : ''
-                    }`}
-                  >
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-        )
-      case 9:
-        return (
-          <div className={`space-y-4 ${isBeginnerOnly(answers.skiingLevels) && step !== 9 ? 'opacity-50' : ''}`}>
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">
-              How important is having off-piste possibilities?
-              {isBeginnerOnly(answers.skiingLevels) && step !== 9 && (
-                <span className="block text-sm font-normal text-gray-600 mt-2">
-                  This question is less relevant for beginners, but you can still answer if you&apos;d like.
-                </span>
-              )}
-              <span className="inline-block relative ml-1">
-                <div className="cursor-help group">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-5 w-5 text-blue-500 hover:text-blue-600 transition-colors" 
-                    viewBox="0 0 24 24" 
-                    fill="currentColor"
-                  >
-                    <path 
-                      fillRule="evenodd" 
-                      d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z"
-                      clipRule="evenodd" 
-                    />
-                  </svg>
-                  <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900/80 text-white text-sm rounded-lg w-64 text-center z-50">
-                    Off-piste refers to skiing or snowboarding on unmarked, ungroomed slopes outside the regular trails.
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-2 h-2 bg-gray-900/80 transform rotate-45"></div>
-                  </div>
-                </div>
-              </span>
-            </h2>
-            <RadioGroup 
-              value={answers.offPiste} 
-              onValueChange={(value) => updateAnswers({ offPiste: value })}
-              disabled={isBeginnerOnly(answers.skiingLevels) && step !== 9}
-            >
-              {['Very important', 'Somewhat important', 'Not important'].map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem 
-                    value={option} 
-                    id={option} 
-                    className="border-blue-500 text-blue-500"
-                    disabled={isBeginnerOnly(answers.skiingLevels) && step !== 9}
-                  />
-                  <Label 
-                    htmlFor={option} 
-                    className={`text-gray-800 hover:text-blue-500 transition-colors ${
-                      isBeginnerOnly(answers.skiingLevels) && step !== 9 ? 'opacity-50' : ''
-                    }`}
-                  >
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-        )
-      case 10:
-        return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">
               Do you prefer ski-in/ski-out resorts?
@@ -609,7 +545,7 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 11:
+      case 9:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">What&apos;s most important to you in a resort? Pick up to 3 things!</h2>
@@ -635,7 +571,7 @@ export default function Component() {
             </div>
           </div>
         )
-      case 12:
+      case 10:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">What other activities would you like to try?</h2>
@@ -660,7 +596,7 @@ export default function Component() {
             </div>
           </div>
         )
-      case 13:
+      case 11:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">When do you want to go skiing?</h2>
@@ -698,7 +634,7 @@ export default function Component() {
             )}
           </div>
         )
-      case 14:
+      case 12:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Is there anything else you&apos;d like to tell us about your perfect ski trip?</h2>
