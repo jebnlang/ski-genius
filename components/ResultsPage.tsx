@@ -40,8 +40,6 @@ interface StorageState {
     offPiste: string
     skiInSkiOut: string
     resortPreferences: string[]
-    otherActivities: string[]
-    lovedResorts: string
     travelTime: string
     travelMonth: string[]
     additionalInfo: string
@@ -732,8 +730,6 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
         off_piste: answers.offPiste,
         ski_in_ski_out: answers.skiInSkiOut,
         resort_preferences: answers.resortPreferences,
-        other_activities: answers.otherActivities,
-        loved_resorts: answers.lovedResorts,
         travel_time: answers.travelTime,
         travel_month: answers.travelMonth,
         additional_info: answers.additionalInfo,
@@ -1147,10 +1143,11 @@ const saveResortsToStorage = (resorts: Resort[]) => {
   localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(storedData))
 }
 
-// Add this function to compare answers
+// Update the areAnswersEqual function
 const areAnswersEqual = (stored: StorageState['answers'], current: StorageState['answers']): boolean => {
   // Helper function to compare arrays regardless of order
   const compareArrays = (arr1: string[], arr2: string[]) => {
+    if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false
     if (arr1.length !== arr2.length) return false
     const sorted1 = [...arr1].sort()
     const sorted2 = [...arr2].sort()
@@ -1171,9 +1168,7 @@ const areAnswersEqual = (stored: StorageState['answers'], current: StorageState[
     stored.offPiste === current.offPiste &&
     stored.skiInSkiOut === current.skiInSkiOut &&
     compareArrays(stored.resortPreferences, current.resortPreferences) &&
-    compareArrays(stored.otherActivities, current.otherActivities) &&
-    stored.lovedResorts === current.lovedResorts &&
-    stored.travelTime === current.travelTime &&
+    stored.travelTime === current.travelTime && // Fixed: Compare as strings
     compareArrays(stored.travelMonth, current.travelMonth) &&
     stored.additionalInfo === current.additionalInfo
   )
