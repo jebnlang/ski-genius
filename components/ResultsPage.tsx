@@ -176,9 +176,10 @@ const DifficultyBar = ({ difficulty, runs }: { difficulty: Resort['difficulty'],
   </TooltipProvider>
 )
 
+// Update the LoadingCard component
 const LoadingCard = () => (
   <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
-    transition-all duration-300 min-h-[600px] flex items-center justify-center">
+    transition-all duration-300 min-h-[180px] flex items-center justify-center">
     <div className="text-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
       <p className="mt-4 text-gray-600">Finding new resort...</p>
@@ -186,19 +187,52 @@ const LoadingCard = () => (
   </Card>
 )
 
-const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => {
+// Update the BookingCTA component
+const BookingCTA = ({ resort }: { resort: Resort }) => {
   const finalUrl = resort.homepage_url || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`;
   
-  console.log('Resort card URL info:', {
-    resortName: resort.name,
-    homepage_url: resort.homepage_url,
-    finalUrl: finalUrl
-  });
+  return (
+    <div className="flex-shrink-0 w-full md:w-48 flex items-center justify-center p-4 md:px-4 border-t md:border-t-0 md:border-l border-gray-200">
+      <a
+        href={finalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => {
+          trackResortWebsiteClick(resort.name);
+        }}
+        className="w-full bg-white bg-opacity-40 border border-white backdrop-blur-md
+          hover:bg-opacity-60 text-gray-800 font-semibold 
+          rounded-full px-6 py-3 shadow-lg transform transition-all duration-300 
+          hover:shadow-xl hover:-translate-y-1 hover:scale-105
+          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+          active:translate-y-0 text-sm flex items-center justify-center gap-2"
+      >
+        <span>Book Now</span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          className="h-4 w-4"
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        >
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+          <polyline points="15 3 21 3 21 9" />
+          <line x1="10" y1="14" x2="21" y2="3" />
+        </svg>
+      </a>
+    </div>
+  );
+};
 
+// Update the ResortCard component
+const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => {
   return (
     <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
       transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10
-      flex flex-col min-h-[800px]">
+      flex flex-col md:flex-row min-h-[180px]">
       <button 
         onClick={onRemove}
         className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 
@@ -207,13 +241,13 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
         <X className="w-4 h-4 text-gray-600" />
       </button>
 
-      <div className="flex-1">
-        <CardHeader className="p-6 pb-2">
-          <div className="flex justify-between items-start">
-            <div className="flex items-start gap-2 flex-1">
+      <div className="flex flex-1 flex-col md:flex-row">
+        <div className="flex-1 p-3 md:p-4 border-b md:border-b-0 md:border-r border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-1">
+            <div className="flex flex-col sm:flex-row items-start gap-1 flex-1">
               <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
-              <div className="flex gap-2">
-                <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white">
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white text-sm">
                   {rank}
                 </Badge>
                 <TooltipProvider delayDuration={100}>
@@ -221,17 +255,12 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
                     <TooltipTrigger asChild>
                       <Badge 
                         variant="outline" 
-                        className={`cursor-help transition-colors ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
+                        className={`cursor-help transition-colors text-sm ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
                       >
                         {getPricingLabel(resort.pricing?.sixDayPass)}
                       </Badge>
                     </TooltipTrigger>
-                    <TooltipContent 
-                      side="top" 
-                      className="bg-white text-gray-800 border border-gray-200 p-2 z-50 shadow-lg"
-                      sideOffset={5}
-                      avoidCollisions={true}
-                    >
+                    <TooltipContent side="top" className="bg-white text-gray-800 border border-gray-200 p-2">
                       <p className="text-sm max-w-[200px]">{getPricingTooltip(resort.pricing?.sixDayPass)}</p>
                     </TooltipContent>
                   </Tooltip>
@@ -239,17 +268,18 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
               </div>
             </div>
           </div>
-          <div className="flex items-center text-sm text-gray-600 mt-1">
+
+          <div className="flex items-center text-sm text-gray-600 mb-2">
             <MapPin className="w-3 h-3 mr-1" /> 
             {resort.location}, {resort.country}
           </div>
-          
-          <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
-            <span className="text-blue-600 font-semibold mb-2 block">Resort Highlights:</span>
-            <ul className="space-y-2">
+
+          <div className="bg-blue-50 rounded-lg p-2 border border-blue-100 mb-2">
+            <span className="text-blue-600 font-semibold mb-1 block text-sm">Resort Highlights:</span>
+            <ul className="space-y-1">
               {resort.highlights.map((highlight, index) => (
                 <li key={index} className="flex items-center text-gray-800">
-                   <Mountain className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
+                  <Mountain className="w-3 h-3 mr-1 text-blue-500 flex-shrink-0" />
                   <span className="text-sm font-medium">{highlight}</span>
                 </li>
               ))}
@@ -257,95 +287,68 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
           </div>
 
           {resort.explanation && (
-            <p className="text-sm text-gray-700 italic mt-3">{resort.explanation}</p>
+            <p className="text-sm text-gray-700 italic">{resort.explanation}</p>
           )}
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-6 pt-2">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="col-span-2">
-              <span className="text-gray-600">Slope Distribution:</span>
+        <div className="flex-1 p-3 md:p-4 flex flex-col">
+          <div className="space-y-2 flex-1">
+            <div className="hidden sm:block">
+              <span className="text-gray-600 text-sm">Slope Distribution:</span>
               <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
             </div>
-            <div>
-              <span className="text-gray-600">Km of Runs:</span>
-              <p className="text-gray-800">{resort.skiArea}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">Number of Lifts:</span>
-              <p className="text-gray-800">{resort.numberOfLifts}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">Village Altitude:</span>
-              <p className="text-gray-800">{resort.villageAltitude}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">Ski Range:</span>
-              <p className="text-gray-800">{resort.skiRange}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">Nightlife:</span>
-              <div className="flex items-center">
-                <Martini className="w-3 h-3 mr-1 text-blue-500" />
-                <span className="text-gray-800">{resort.nightlife}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="col-span-2 mt-6 bg-green-50 rounded-lg p-3 border border-green-100">
-            <span className="text-green-600 font-semibold block mb-2">Lift Pass Pricing:</span>
+
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="text-gray-600">Daily Pass:</span>
-                <p className="text-gray-800 font-medium">{resort.pricing?.dailyPass}</p>
+              <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">Ski Area:</span>
+                  <p className="text-gray-800 font-medium text-sm">{resort.skiArea}</p>
+                </div>
               </div>
-              <div>
-                <span className="text-gray-600">6-Day Pass:</span>
-                <p className="text-gray-800 font-medium">{resort.pricing?.sixDayPass}</p>
+              
+              <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">Lifts:</span>
+                  <p className="text-gray-800 font-medium text-sm">{resort.numberOfLifts}</p>
+                </div>
+              </div>
+              
+              <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">Village:</span>
+                  <p className="text-gray-800 font-medium text-sm">{resort.villageAltitude}</p>
+                </div>
+              </div>
+              
+              <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">Nightlife:</span>
+                  <div className="flex items-center">
+                    <Martini className="w-3 h-3 mr-1 text-blue-500" />
+                    <span className="text-gray-800 font-medium text-sm">{resort.nightlife}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-green-50 rounded-lg p-2 border border-green-100">
+              <span className="text-green-600 font-semibold block mb-1 text-sm">Lift Pass Pricing:</span>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">Daily Pass:</span>
+                  <p className="text-gray-800 font-medium text-sm">{resort.pricing?.dailyPass}</p>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">6-Day Pass:</span>
+                  <p className="text-gray-800 font-medium text-sm">{resort.pricing?.sixDayPass}</p>
+                </div>
               </div>
             </div>
           </div>
-        </CardContent>
+        </div>
       </div>
 
-      <div className="p-6 mt-auto">
-        <a
-          href={finalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => {
-            console.log('Clicked resort link:', {
-              resort: resort.name,
-              url: finalUrl
-            });
-            trackResortWebsiteClick(resort.name);
-          }}
-          className="block w-full bg-gradient-to-r from-blue-500 to-blue-600 
-            hover:from-blue-600 hover:to-blue-700 text-white font-semibold 
-            rounded-full px-6 py-3.5 shadow-lg transform transition-all duration-300 
-            hover:shadow-blue-400/30 hover:shadow-xl hover:-translate-y-1
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-            active:translate-y-0"
-        >
-          <div className="flex items-center justify-center space-x-2">
-            <span>Book Your Ski Trip</span>
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-5 w-5" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-          </div>
-        </a>
-      </div>
+      <BookingCTA resort={resort} />
     </Card>
   )
 }
@@ -1627,13 +1630,13 @@ export default function ResultsPage() {
 
   // Main content
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 relative overflow-hidden py-8 px-4 sm:px-6 lg:px-8">
       <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
       <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow"></div>
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">Your Perfect Ski Destinations</h1>
-          <p className="text-gray-600 mb-6">Based on your preferences, we&apos;ve found these amazing matches</p>
+      <div className="max-w-5xl mx-auto relative z-10">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-3">Your Perfect Ski Destinations</h1>
+          <p className="text-gray-600 mb-4">Based on your preferences, we&apos;ve found these amazing matches</p>
           {!isLoading && !error && (
             <div className="flex justify-center">
               <RefinementDialog 
@@ -1644,7 +1647,7 @@ export default function ResultsPage() {
           )}
         </div>
         
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 relative group">
+        <div className="grid gap-4 grid-cols-1 relative group">
           {resorts.map((resort, index) => (
             <div key={index} className="transition-all duration-300 group-hover:opacity-50 hover:!opacity-100">
               {loadingCards[index] ? (
