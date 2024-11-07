@@ -25,6 +25,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { trackResortView, trackResortRemoval, trackSearchRefinement } from '@/utils/analytics'
 import Fuse from 'fuse.js'
+import { Textarea } from "@/components/ui/textarea"
 
 // Define all necessary types
 interface StorageState {
@@ -44,6 +45,7 @@ interface StorageState {
     travelMonth: string[]
     additionalInfo: string
     pricingSensitivity: string
+    otherActivities: string[]
   }
   lastUpdated: string
   currentStep: number
@@ -859,29 +861,9 @@ const RefinementDialog = ({
             )}
           </div>
 
-          {/* Add Pricing Sensitivity section before Sport Type */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Budget Preference</Label>
-            <RadioGroup 
-              value={tempAnswers.pricingSensitivity} 
-              onValueChange={(value) => setTempAnswers(prev => ({ ...prev, pricingSensitivity: value }))}
-            >
-              {[
-                'Very important - I\'d prefer destinations known for lower overall costs',
-                'Not important - I\'ll find suitable accommodation in any destination',
-                'Looking specifically for luxury destinations'
-              ].map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`pricing-${option}`} />
-                  <Label htmlFor={`pricing-${option}`}>{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-
           {/* Sport Type */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Sport Type</Label>
+            <Label className="text-lg font-semibold">Are you skiers or snowboarders?</Label>
             <RadioGroup value={tempAnswers.sportType} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, sportType: value }))}>
               {['Skiers', 'Snowboarders', 'Mixed'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
@@ -894,7 +876,7 @@ const RefinementDialog = ({
 
           {/* Location */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Preferred Countries</Label>
+            <Label className="text-lg font-semibold">Where would you like to ski?</Label>
             <div className="grid grid-cols-2 gap-2">
               {[
                 'Anywhere in Europe',
@@ -946,31 +928,75 @@ const RefinementDialog = ({
 
           {/* Skiing Level */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Skiing Level</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <Label className="text-lg font-semibold">What are the skiing levels in your group?</Label>
+            <div className="space-y-2">
               {['First timers', 'Beginners', 'Intermediates', 'Advanced'].map((level) => (
                 <div key={level} className="flex items-center space-x-2">
                   <Checkbox
                     id={`level-${level}`}
                     checked={tempAnswers.skiingLevels.includes(level)}
                     onCheckedChange={(checked) => {
-                      setTempAnswers(prev => ({
-                        ...prev,
-                        skiingLevels: checked 
-                          ? [...prev.skiingLevels, level]
-                          : prev.skiingLevels.filter(l => l !== level)
-                      }))
+                      const newLevels = checked
+                        ? [...tempAnswers.skiingLevels, level]
+                        : tempAnswers.skiingLevels.filter((l) => l !== level);
+                      setTempAnswers(prev => ({ ...prev, skiingLevels: newLevels }));
                     }}
                   />
                   <Label htmlFor={`level-${level}`}>{level}</Label>
                 </div>
               ))}
             </div>
+
+            {hasAdvancedSkiers(tempAnswers.skiingLevels) && (
+              <div className="mt-8 space-y-6">
+                <div className="space-y-4">
+                  <Label className="text-lg font-semibold">Is having a snow park important?</Label>
+                  <RadioGroup value={tempAnswers.snowPark} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, snowPark: value }))}>
+                    {['Very important', 'Somewhat important', 'Not important'].map((option) => (
+                      <div key={option} className="flex items-center space-x-2">
+                        <RadioGroupItem value={option} id={`snowpark-${option}`} />
+                        <Label htmlFor={`snowpark-${option}`}>{option}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="text-lg font-semibold">How important is having off-piste possibilities?</Label>
+                  <RadioGroup value={tempAnswers.offPiste} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, offPiste: value }))}>
+                    {['Very important', 'Somewhat important', 'Not important'].map((option) => (
+                      <div key={option} className="flex items-center space-x-2">
+                        <RadioGroupItem value={option} id={`offpiste-${option}`} />
+                        <Label htmlFor={`offpiste-${option}`}>{option}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Budget Preference */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">What&apos;s your budget preference?</Label>
+            <RadioGroup value={tempAnswers.pricingSensitivity} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, pricingSensitivity: value }))}>
+              {[
+                'Flexible',
+                'Budget-friendly',
+                'Mid-range',
+                'Luxury'
+              ].map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`pricing-${option}`} />
+                  <Label htmlFor={`pricing-${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
 
           {/* Lessons */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Lessons Needed</Label>
+            <Label className="text-lg font-semibold">Would anyone in your group like ski or snowboard lessons?</Label>
             <RadioGroup value={tempAnswers.lessons} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, lessons: value }))}>
               {['Yes', 'No'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
@@ -983,7 +1009,7 @@ const RefinementDialog = ({
 
           {/* Nightlife */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Nightlife Importance</Label>
+            <Label className="text-lg font-semibold">How important is nightlife and après-ski?</Label>
             <RadioGroup value={tempAnswers.nightlife} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, nightlife: value }))}>
               {['Very important', 'Somewhat important', 'Not important'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
@@ -994,35 +1020,9 @@ const RefinementDialog = ({
             </RadioGroup>
           </div>
 
-          {/* Snow Park */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Snow Park Importance</Label>
-            <RadioGroup value={tempAnswers.snowPark} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, snowPark: value }))}>
-              {['Very important', 'Somewhat important', 'Not important'].map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`snowpark-${option}`} />
-                  <Label htmlFor={`snowpark-${option}`}>{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-
-          {/* Off-Piste */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Off-Piste Importance</Label>
-            <RadioGroup value={tempAnswers.offPiste} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, offPiste: value }))}>
-              {['Very important', 'Somewhat important', 'Not important'].map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`offpiste-${option}`} />
-                  <Label htmlFor={`offpiste-${option}`}>{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-
           {/* Ski-in/Ski-out */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Ski-in/Ski-out Preference</Label>
+            <Label className="text-lg font-semibold">Do you prefer ski-in/ski-out resorts?</Label>
             <RadioGroup value={tempAnswers.skiInSkiOut} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, skiInSkiOut: value }))}>
               {['Yes, must have', 'Nice to have', "Don't care"].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
@@ -1033,10 +1033,10 @@ const RefinementDialog = ({
             </RadioGroup>
           </div>
 
-          {/* Important Features */}
+          {/* Resort Preferences */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Most Important Features (Pick up to 3)</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <Label className="text-lg font-semibold">What&apos;s most important to you in a resort? Pick up to 3 things!</Label>
+            <div className="space-y-2">
               {[
                 'Extensive ski area',
                 'Less crowded slopes',
@@ -1046,25 +1046,61 @@ const RefinementDialog = ({
                 'Scenic beauty',
                 'Modern lift system',
                 'Snow sure- High altitude resort'
-              ].map((feature) => (
-                <div key={feature} className="flex items-center space-x-2">
+              ].map((preference) => (
+                <div key={preference} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`feature-${feature}`}
-                    checked={tempAnswers.resortPreferences.includes(feature)}
+                    id={`preference-${preference}`}
+                    checked={tempAnswers.resortPreferences.includes(preference)}
+                    onCheckedChange={(checked) => {
+                      if (checked && tempAnswers.resortPreferences.length < 3) {
+                        setTempAnswers(prev => ({
+                          ...prev,
+                          resortPreferences: [...prev.resortPreferences, preference]
+                        }))
+                      } else if (!checked) {
+                        setTempAnswers(prev => ({
+                          ...prev,
+                          resortPreferences: prev.resortPreferences.filter(p => p !== preference)
+                        }))
+                      }
+                    }}
+                    disabled={tempAnswers.resortPreferences.length >= 3 && !tempAnswers.resortPreferences.includes(preference)}
+                  />
+                  <Label htmlFor={`preference-${preference}`}>{preference}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Other Activities */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">What other activities would you like to try?</Label>
+            <div className="space-y-2">
+              {[
+                "Spa/wellness facilities",
+                "Great food scene",
+                "Cross-country skiing",
+                "Winter hiking",
+                "Heli Skiing",
+                "Cat skiing",
+                "Ski touring",
+                "Night skiing",
+                "Sledding/Toboganning"
+              ].map((activity) => (
+                <div key={activity} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`activity-${activity}`}
+                    checked={tempAnswers.otherActivities.includes(activity)}
                     onCheckedChange={(checked) => {
                       setTempAnswers(prev => ({
                         ...prev,
-                        resortPreferences: checked
-                          ? [...prev.resortPreferences, feature].slice(0, 3)
-                          : prev.resortPreferences.filter(f => f !== feature)
+                        otherActivities: checked
+                          ? [...prev.otherActivities, activity]
+                          : prev.otherActivities.filter((a: string) => a !== activity)
                       }))
                     }}
-                    disabled={
-                      tempAnswers.resortPreferences.length >= 3 && 
-                      !tempAnswers.resortPreferences.includes(feature)
-                    }
                   />
-                  <Label htmlFor={`feature-${feature}`}>{feature}</Label>
+                  <Label htmlFor={`activity-${activity}`}>{activity}</Label>
                 </div>
               ))}
             </div>
@@ -1072,7 +1108,7 @@ const RefinementDialog = ({
 
           {/* Travel Time */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">When do you want to go?</Label>
+            <Label className="text-lg font-semibold">When do you want to go skiing?</Label>
             <RadioGroup value={tempAnswers.travelTime} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, travelTime: value }))}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="month" id="month" />
@@ -1108,6 +1144,19 @@ const RefinementDialog = ({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Additional Info */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Additional Information</Label>
+            <Textarea
+              placeholder="Tell us more about your perfect ski trip..."
+              value={tempAnswers.additionalInfo}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
+                setTempAnswers(prev => ({ ...prev, additionalInfo: e.target.value }))
+              }
+              className="min-h-[100px]"
+            />
           </div>
 
           <Button 
@@ -1614,3 +1663,10 @@ export default function ResultsPage() {
     </div>
   )
 }
+
+// Add this helper function before the RefinementDialog component
+const hasAdvancedSkiers = (skiingLevels: string[]): boolean => {
+  return skiingLevels.some(level => 
+    level === 'Intermediates' || level === 'Advanced'
+  );
+};
