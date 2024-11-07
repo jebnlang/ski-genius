@@ -40,7 +40,6 @@ interface StorageState {
     offPiste: string
     skiInSkiOut: string
     resortPreferences: string[]
-    slopePreferences: string[]
     otherActivities: string[]
     lovedResorts: string
     travelTime: string
@@ -733,7 +732,6 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
         off_piste: answers.offPiste,
         ski_in_ski_out: answers.skiInSkiOut,
         resort_preferences: answers.resortPreferences,
-        slope_preferences: answers.slopePreferences,
         other_activities: answers.otherActivities,
         loved_resorts: answers.lovedResorts,
         travel_time: answers.travelTime,
@@ -831,7 +829,7 @@ const RefinementDialog = ({
           <div className="space-y-4">
             <Label className="text-lg font-semibold">Group Type</Label>
             <RadioGroup value={tempAnswers.groupType} onValueChange={(value) => setTempAnswers(prev => ({ ...prev, groupType: value }))}>
-              {['Couple', 'Group of friends', 'Family with children', 'Family without children', 'Mixed group family & friends'].map((option) => (
+              {['Couple', 'Group of friends', 'Family with children', 'Family without children'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <RadioGroupItem value={option} id={`group-${option}`} />
                   <Label htmlFor={`group-${option}`}>{option}</Label>
@@ -972,27 +970,6 @@ const RefinementDialog = ({
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Resort Size */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Resort Size</Label>
-            <RadioGroup
-              value={tempAnswers.slopePreferences[0]}
-              onValueChange={(value) => {
-                setTempAnswers(prev => ({
-                  ...prev,
-                  slopePreferences: [value]
-                }))
-              }}
-            >
-              {['Small and charming', 'Medium-sized resort', 'Large ski area', "I don't mind"].map((size) => (
-                <div key={size} className="flex items-center space-x-2">
-                  <RadioGroupItem value={size} id={`size-${size}`} />
-                  <Label htmlFor={`size-${size}`}>{size}</Label>
-                </div>
-              ))}
-            </RadioGroup>
           </div>
 
           {/* Lessons */}
@@ -1194,7 +1171,6 @@ const areAnswersEqual = (stored: StorageState['answers'], current: StorageState[
     stored.offPiste === current.offPiste &&
     stored.skiInSkiOut === current.skiInSkiOut &&
     compareArrays(stored.resortPreferences, current.resortPreferences) &&
-    compareArrays(stored.slopePreferences, current.slopePreferences) &&
     compareArrays(stored.otherActivities, current.otherActivities) &&
     stored.lovedResorts === current.lovedResorts &&
     stored.travelTime === current.travelTime &&

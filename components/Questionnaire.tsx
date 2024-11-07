@@ -22,9 +22,7 @@ interface Answers {
   offPiste: string
   skiInSkiOut: string
   resortPreferences: string[]
-  slopePreferences: string[]
   otherActivities: string[]
-  lovedResorts: string
   travelTime: string
   travelMonth: string[]
   additionalInfo: string
@@ -34,18 +32,16 @@ const defaultAnswers: Answers = {
   groupType: '',
   childrenAges: [],
   sportType: '',
-  countries: [],
+  countries: ['Anywhere in Europe'],
   skiingLevels: [],
-  pricingSensitivity: '',
+  pricingSensitivity: 'Flexible',
   lessons: '',
   nightlife: '',
   snowPark: '',
   offPiste: '',
   skiInSkiOut: '',
   resortPreferences: [],
-  slopePreferences: [],
   otherActivities: [],
-  lovedResorts: '',
   travelTime: '',
   travelMonth: [],
   additionalInfo: ''
@@ -75,12 +71,6 @@ const useQuestionnaireState = () => {
         } catch (error) {
           console.error('Error loading saved questionnaire data:', error)
         }
-      } else {
-        // If no saved data, set default 'Anywhere' for countries
-        setAnswers(prev => ({
-          ...prev,
-          countries: ['Anywhere']
-        }))
       }
     }
 
@@ -89,11 +79,17 @@ const useQuestionnaireState = () => {
 
   const updateAnswers = (updates: Partial<Answers>) => {
     setAnswers((prevAnswers): Answers => {
-      const newAnswers = { 
-        ...prevAnswers, 
-        ...updates,
-      };
-    
+      let newAnswers = { ...prevAnswers, ...updates };
+
+      // If updating skiing levels and they're all beginners, set defaults for questions 8 and 9
+      if (updates.skiingLevels && isBeginnerOnly(updates.skiingLevels)) {
+        newAnswers = {
+          ...newAnswers,
+          snowPark: 'Not important',
+          offPiste: 'Not important'
+        };
+      }
+
       const storageData: StorageState = {
         answers: newAnswers,
         lastUpdated: new Date().toISOString(),
@@ -175,18 +171,16 @@ const questionRoutes = {
   2: 'ski-or-snowboard',
   3: 'location',
   4: 'skill-level',
-  5: 'resort-size',
-  6: 'pricing-sensitivity',
-  7: 'lessons',
-  8: 'nightlife',
-  9: 'snow-park',
-  10: 'off-piste',
-  11: 'ski-in-ski-out',
-  12: 'resort-preferences',
-  13: 'activities',
-  14: 'previous-resorts',
-  15: 'travel-time',
-  16: 'additional-info'
+  5: 'pricing-sensitivity',
+  6: 'lessons',
+  7: 'nightlife',
+  8: 'snow-park',
+  9: 'off-piste',
+  10: 'ski-in-ski-out',
+  11: 'resort-preferences',
+  12: 'activities',
+  13: 'travel-time',
+  14: 'additional-info'
 }
 
 // Reverse mapping to get step number from route
@@ -194,6 +188,13 @@ const routeToStep = Object.entries(questionRoutes).reduce((acc, [step, route]) =
   acc[route] = parseInt(step)
   return acc
 }, {} as Record<string, number>)
+
+// Add this helper function near the top of the file, after the interfaces
+const isBeginnerOnly = (skiingLevels: string[]): boolean => {
+  return skiingLevels.every(level => 
+    level === 'First timers' || level === 'Beginners'
+  ) && skiingLevels.length > 0;
+};
 
 export default function Component() {
   const pathname = usePathname()
@@ -234,11 +235,16 @@ export default function Component() {
   // Simplify handleNext to use the new helper
   const handleNext = () => {
     if (step < totalSteps) {
-      navigateToStep(step + 1)
+      // Skip questions 8 and 9 for beginners when coming from question 7
+      if (step === 7 && isBeginnerOnly(answers.skiingLevels)) {
+        navigateToStep(10);
+      } else {
+        navigateToStep(step + 1);
+      }
     } else {
-      router.push('/results')
+      router.push('/results');
     }
-  }
+  };
 
   // Simplify handlePrevious to use the new helper
   const handlePrevious = () => {
@@ -247,7 +253,7 @@ export default function Component() {
     }
   }
 
-  const totalSteps = 16
+  const totalSteps = 14
 
   const isQuestionAnswered = () => {
     switch (step) {
@@ -255,18 +261,16 @@ export default function Component() {
       case 2: return !!answers.sportType
       case 3: return answers.countries && answers.countries.length > 0 && answers.countries[0] !== ''
       case 4: return answers.skiingLevels.length > 0
-      case 5: return answers.slopePreferences.length > 0
-      case 6: return !!answers.pricingSensitivity
-      case 7: return !!answers.lessons
-      case 8: return !!answers.nightlife
-      case 9: return !!answers.snowPark
-      case 10: return !!answers.offPiste
-      case 11: return !!answers.skiInSkiOut
-      case 12: return answers.resortPreferences.length > 0
-      case 13: return answers.otherActivities.length > 0
-      case 14: return !!answers.lovedResorts
-      case 15: return !!answers.travelTime && (answers.travelTime === 'flexible' || answers.travelMonth.length > 0)
-      case 16: return true
+      case 5: return !!answers.pricingSensitivity
+      case 6: return !!answers.lessons
+      case 7: return !!answers.nightlife
+      case 8: return !!answers.snowPark
+      case 9: return !!answers.offPiste
+      case 10: return !!answers.skiInSkiOut
+      case 11: return answers.resortPreferences.length > 0
+      case 12: return answers.otherActivities.length > 0
+      case 13: return !!answers.travelTime && (answers.travelTime === 'flexible' || answers.travelMonth.length > 0)
+      case 14: return true
       default: return false
     }
   }
@@ -279,7 +283,7 @@ export default function Component() {
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Select your group type</h2>
             <RadioGroup value={answers.groupType} onValueChange={(value) => updateAnswers({ groupType: value })}>
-              {['Couple', 'Group of friends', 'Family with children', 'Family without children', 'Mixed group family & friends'].map((option) => (
+              {['Couple', 'Group of friends', 'Family with children', 'Family without children'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
                   <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
@@ -412,26 +416,13 @@ export default function Component() {
       case 5:
         return (
           <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">How big would you like your ski resort to be?</h2>
-            <RadioGroup value={answers.slopePreferences[0]} onValueChange={(value) => updateAnswers({ slopePreferences: [value] })}>
-              {['Small and charming', 'Medium-sized resort', 'Large ski area', "I don't mind"].map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
-                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-        )
-      case 6:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">How important is finding a budget-friendly destination?</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">What's your budget preference?</h2>
             <RadioGroup value={answers.pricingSensitivity} onValueChange={(value) => updateAnswers({ pricingSensitivity: value })}>
               {[
-                'Very important - I\'d prefer destinations known for lower overall costs',
-                'Not important - I\'ll find suitable accommodation in any destination',
-                'Looking specifically for luxury destinations'
+                'Flexible',
+                'Budget-friendly',
+                'Mid-range',
+                'Luxury'
               ].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <RadioGroupItem value={option} id={`pricing-${option}`} className="border-blue-500 text-blue-500" />
@@ -441,7 +432,7 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 7:
+      case 6:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Would anyone in your group like ski or snowboard lessons?</h2>
@@ -455,7 +446,7 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 8:
+      case 7:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">How important is nightlife and après-ski?</h2>
@@ -469,11 +460,16 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 9:
+      case 8:
         return (
-          <div className="space-y-4">
+          <div className={`space-y-4 ${isBeginnerOnly(answers.skiingLevels) && step !== 8 ? 'opacity-50' : ''}`}>
             <h2 className="text-3xl font-bold mb-6 text-gray-800">
               Is having a snow park important?
+              {isBeginnerOnly(answers.skiingLevels) && step !== 8 && (
+                <span className="block text-sm font-normal text-gray-600 mt-2">
+                  This question is less relevant for beginners, but you can still answer if you'd like.
+                </span>
+              )}
               <div className="relative inline-block">
                 <div className="cursor-help group">
                   <svg 
@@ -495,21 +491,42 @@ export default function Component() {
                 </div>
               </div>
             </h2>
-            <RadioGroup value={answers.snowPark} onValueChange={(value) => updateAnswers({ snowPark: value })}>
+            <RadioGroup 
+              value={answers.snowPark} 
+              onValueChange={(value) => updateAnswers({ snowPark: value })}
+              disabled={isBeginnerOnly(answers.skiingLevels) && step !== 8}
+            >
               {['Very important', 'Somewhat important', 'Not important'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
-                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
+                  <RadioGroupItem 
+                    value={option} 
+                    id={option} 
+                    className="border-blue-500 text-blue-500"
+                    disabled={isBeginnerOnly(answers.skiingLevels) && step !== 8}
+                  />
+                  <Label 
+                    htmlFor={option} 
+                    className={`text-gray-800 hover:text-blue-500 transition-colors ${
+                      isBeginnerOnly(answers.skiingLevels) && step !== 8 ? 'opacity-50' : ''
+                    }`}
+                  >
+                    {option}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
           </div>
         )
-      case 10:
+      case 9:
         return (
-          <div className="space-y-4">
+          <div className={`space-y-4 ${isBeginnerOnly(answers.skiingLevels) && step !== 9 ? 'opacity-50' : ''}`}>
             <h2 className="text-3xl font-bold mb-6 text-gray-800">
               How important is having off-piste possibilities?
+              {isBeginnerOnly(answers.skiingLevels) && step !== 9 && (
+                <span className="block text-sm font-normal text-gray-600 mt-2">
+                  This question is less relevant for beginners, but you can still answer if you'd like.
+                </span>
+              )}
               <span className="inline-block relative ml-1">
                 <div className="cursor-help group">
                   <svg 
@@ -531,17 +548,33 @@ export default function Component() {
                 </div>
               </span>
             </h2>
-            <RadioGroup value={answers.offPiste} onValueChange={(value) => updateAnswers({ offPiste: value })}>
+            <RadioGroup 
+              value={answers.offPiste} 
+              onValueChange={(value) => updateAnswers({ offPiste: value })}
+              disabled={isBeginnerOnly(answers.skiingLevels) && step !== 9}
+            >
               {['Very important', 'Somewhat important', 'Not important'].map((option) => (
                 <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} className="border-blue-500 text-blue-500" />
-                  <Label htmlFor={option} className="text-gray-800 hover:text-blue-500 transition-colors">{option}</Label>
+                  <RadioGroupItem 
+                    value={option} 
+                    id={option} 
+                    className="border-blue-500 text-blue-500"
+                    disabled={isBeginnerOnly(answers.skiingLevels) && step !== 9}
+                  />
+                  <Label 
+                    htmlFor={option} 
+                    className={`text-gray-800 hover:text-blue-500 transition-colors ${
+                      isBeginnerOnly(answers.skiingLevels) && step !== 9 ? 'opacity-50' : ''
+                    }`}
+                  >
+                    {option}
+                  </Label>
                 </div>
               ))}
             </RadioGroup>
           </div>
         )
-      case 11:
+      case 10:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">
@@ -577,7 +610,7 @@ export default function Component() {
             </RadioGroup>
           </div>
         )
-      case 12:
+      case 11:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">What&apos;s most important to you in a resort? Pick up to 3 things!</h2>
@@ -603,7 +636,7 @@ export default function Component() {
             </div>
           </div>
         )
-      case 13:
+      case 12:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">What other activities would you like to try?</h2>
@@ -628,19 +661,7 @@ export default function Component() {
             </div>
           </div>
         )
-      case 14:
-        return (
-          <div className="space-y-4">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Have you visited any ski resorts you loved? We&apos;ll find more like them!</h2>
-            <Input
-              placeholder="Enter resorts"
-              value={answers.lovedResorts}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateAnswers({ lovedResorts: e.target.value })}
-              className="bg-white text-gray-800 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-        )      
-      case 15:
+      case 13:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">When do you want to go skiing?</h2>
@@ -678,7 +699,7 @@ export default function Component() {
             )}
           </div>
         )
-      case 16:
+      case 14:
         return (
           <div className="space-y-4">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Is there anything else you&apos;d like to tell us about your perfect ski trip?</h2>
