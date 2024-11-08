@@ -189,12 +189,10 @@ const LoadingCard = () => (
 
 // Update the BookingCTA component
 const BookingCTA = ({ resort }: { resort: Resort }) => {
-  const finalUrl = resort.homepage_url || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`;
-  
   return (
     <div className="flex-shrink-0 w-full md:w-48 flex items-center justify-center p-4 md:px-4 border-t md:border-t-0 md:border-l border-gray-200">
       <a
-        href={finalUrl}
+        href={resort.homepage_url || resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {
