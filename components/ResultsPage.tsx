@@ -496,7 +496,8 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
         typeof resort.runs.advanced === 'number',
       skiArea: typeof resort.skiArea === 'string',
       nightlife: ['Vibrant', 'Moderate', 'Quiet'].includes(resort.nightlife),
-      highlights: Array.isArray(resort.highlights)
+      highlights: Array.isArray(resort.highlights),
+      website: typeof resort.website === 'string'
     };
 
     const invalidFields = Object.entries(requiredFields)
@@ -1284,19 +1285,6 @@ const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => 
   try {
     console.log('Starting database validation for resorts:', resorts.map(r => r.name));
 
-    // First, let's check if we can connect to the database
-    const { data: testConnection, error: testError } = await supabase
-      .from('ski_resorts_validation_list')
-      .select('count');
-
-    if (testError) {
-      console.error('Database connection test failed:', testError);
-      return resorts;
-    }
-
-    console.log('Database connection successful');
-
-    // Now fetch all resorts at once instead of making multiple queries
     const { data: validationList, error } = await supabase
       .from('ski_resorts_validation_list')
       .select('resort_name, homepage_url');
@@ -1312,66 +1300,94 @@ const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => 
     }
 
     console.log(`Found ${validationList.length} resorts in validation list`);
-    console.log('Sample of validation data:', validationList.slice(0, 3));
 
-    // Create a map for faster lookups
-    const resortMap = new Map(
+    // Create maps for different types of matches
+    const exactMatchMap = new Map(
       validationList.map(item => [item.resort_name.toLowerCase(), item])
     );
 
-    const validatedResorts = resorts.map(resort => {
+    const partialMatchMap = new Map(
+      validationList.map(item => [item.resort_name.toLowerCase().replace(/[^a-z0-9]/g, ''), item])
+    );
+
+    const validatedResorts = await Promise.all(resorts.map(async (resort) => {
+      const resortName = resort.name.toLowerCase();
+      const cleanResortName = resortName.replace(/[^a-z0-9]/g, '');
+      
       console.log(`\nValidating resort: ${resort.name}`);
 
-      // Try exact match first (case insensitive)
-      const exactMatch = resortMap.get(resort.name.toLowerCase());
+      // Try exact match first
+      const exactMatch = exactMatchMap.get(resortName);
       if (exactMatch) {
         console.log('Found exact match:', exactMatch);
         return {
           ...resort,
           name: exactMatch.resort_name,
-          homepage_url: exactMatch.homepage_url
+          website: exactMatch.homepage_url
         };
       }
 
-      // Try partial matches
-      const partialMatches = validationList.filter(item => 
-        item.resort_name.toLowerCase().includes(resort.name.toLowerCase()) ||
-        resort.name.toLowerCase().includes(item.resort_name.toLowerCase())
+      // Try partial matches with cleaned names
+      const partialMatch = Array.from(partialMatchMap.entries()).find(([key, value]) => 
+        key.includes(cleanResortName) || cleanResortName.includes(key)
       );
-
-      if (partialMatches.length > 0) {
-        console.log('Found partial match:', partialMatches[0]);
+      
+      if (partialMatch) {
+        console.log('Found partial match:', partialMatch[1]);
         return {
           ...resort,
-          name: partialMatches[0].resort_name,
-          homepage_url: partialMatches[0].homepage_url
+          name: partialMatch[1].resort_name,
+          website: partialMatch[1].homepage_url
         };
       }
 
       // Try fuzzy matching as a last resort
       const fuse = new Fuse(validationList, {
         keys: ['resort_name'],
-        threshold: 0.3
+        threshold: 0.3, // Lower threshold for stricter matching
+        includeScore: true
       });
 
       const fuzzyMatches = fuse.search(resort.name);
-      if (fuzzyMatches.length > 0) {
+      if (fuzzyMatches.length > 0 && fuzzyMatches[0].score && fuzzyMatches[0].score < 0.6) {
         console.log('Found fuzzy match:', fuzzyMatches[0].item);
         return {
           ...resort,
           name: fuzzyMatches[0].item.resort_name,
-          homepage_url: fuzzyMatches[0].item.homepage_url
+          website: fuzzyMatches[0].item.homepage_url
+        };
+      }
+
+      // If no match found, try one final direct database query
+      const { data: directMatch } = await supabase
+        .from('ski_resorts_validation_list')
+        .select('resort_name, homepage_url')
+        .ilike('resort_name', `%${resort.name}%`)
+        .limit(1)
+        .single();
+
+      if (directMatch) {
+        console.log('Found direct database match:', directMatch);
+        return {
+          ...resort,
+          name: directMatch.resort_name,
+          website: directMatch.homepage_url
         };
       }
 
       console.log('No match found for:', resort.name);
-      return resort;
-    });
+      return {
+        ...resort,
+        website: `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`
+      };
+    }));
 
-    console.log('Final validated resorts:', validatedResorts.map(r => ({
-      name: r.name,
-      homepage_url: r.homepage_url
-    })));
+    // Log results for debugging
+    validatedResorts.forEach(resort => {
+      console.log(`Resort: ${resort.name}`);
+      console.log(`Website: ${resort.website}`);
+      console.log(`Is fallback URL: ${resort.website.includes('google.com')}`);
+    });
 
     return validatedResorts;
 
@@ -1445,7 +1461,10 @@ export default function ResultsPage() {
         const storedResorts = await getResortsFromStorage(answers)
         if (storedResorts) {
           console.log('Using stored resort results - answers match exactly')
-          setResorts(storedResorts)
+          
+          // Add URL validation even for stored results
+          const validatedResorts = await validateAgainstDatabase(storedResorts)
+          setResorts(validatedResorts)
           setIsLoading(false)
           return
         }
@@ -1473,19 +1492,13 @@ export default function ResultsPage() {
             throw new Error('No resort recommendations received')
           }
 
-          // First validate the basic resort structure
-          const basicValidatedResorts = validateResorts(parsedResorts, answers.countries)
-          console.log('Basic validated resorts:', basicValidatedResorts)
-          
-          // Then validate against the database to get URLs
-          const fullyValidatedResorts = await validateAgainstDatabase(basicValidatedResorts)
-          console.log('Fully validated resorts with URLs:', fullyValidatedResorts)
-          
-          setResorts(fullyValidatedResorts)
-          saveResortsToStorage(fullyValidatedResorts) // Save the fully validated resorts
+          // Ensure URLs are fetched for new results
+          const validatedResorts = await validateAgainstDatabase(parsedResorts)
+          setResorts(validatedResorts)
+          saveResortsToStorage(validatedResorts)
           
           try {
-            await saveToDatabase(answers, fullyValidatedResorts)
+            await saveToDatabase(answers, validatedResorts)
           } catch (dbError) {
             console.error('Database error:', dbError)
           }
