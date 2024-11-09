@@ -1,11 +1,20 @@
-// import Navigation from './Navigation'
+import Footer from '@/components/Footer'
+import Head from 'next/head'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100">
-      <main className="container mx-auto px-4 py-8">
-        {children}
-      </main>
-    </div>
+    <>
+      <Head>
+        <title>SkiGenius | Your Personal Ski Equipment Advisor</title>
+        <meta name="description" content="Get personalized ski equipment recommendations based on your experience and preferences" />
+        // ... rest of the head content
+      </Head>
+      <div className="min-h-screen flex flex-col">
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
+      </div>
+    </>
   )
 }

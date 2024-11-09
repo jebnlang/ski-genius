@@ -68,3 +68,29 @@ body {
 .animate-snow {
   animation: snow 20s linear infinite;
 }
+
+/* Add these to your existing globals.css */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+footer {
+  flex-shrink: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}

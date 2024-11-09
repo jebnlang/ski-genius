@@ -9,7 +9,7 @@ import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Snowflake, Users, Mountain, Martini, MapPin, X, Filter, Star, Sparkles, Lightbulb } from 'lucide-react'
+import { Snowflake, Users, Mountain, Martini, MapPin, X, Filter, Star, Sparkles, Lightbulb, Heart, MessageSquare } from 'lucide-react'
 import { supabase } from '@/utils/supabase'
 import { PostgrestError } from '@supabase/supabase-js'
 import {
@@ -1460,28 +1460,14 @@ const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => 
   }
 };
 
-// First, add this interface near the top of the file with other interfaces
-interface WindowWithGtag extends Window {
-  gtag: (
-    command: string,
-    target: string,
-    config?: {
-      resort_name?: string;
-      event_category?: string;
-      event_label?: string;
-      [key: string]: unknown;
-    }
-  ) => void;
-}
-
-// Then update the trackResortWebsiteClick function to use the proper typing
+// Remove the global declaration and just use the trackResortWebsiteClick function
 const trackResortWebsiteClick = (resortName: string) => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', 'resort_website_click', {
       resort_name: resortName,
       event_category: 'outbound_link',
       event_label: resortName,
-    });
+    })
   }
 }
 
