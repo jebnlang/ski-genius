@@ -9,7 +9,7 @@ import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Snowflake, Users, Mountain, Martini, MapPin, X, Filter } from 'lucide-react'
+import { Snowflake, Users, Mountain, Martini, MapPin, X, Filter, Star, Sparkles, Lightbulb } from 'lucide-react'
 import { supabase } from '@/utils/supabase'
 import { PostgrestError } from '@supabase/supabase-js'
 import {
@@ -205,7 +205,7 @@ const BookingCTA = ({ resort }: { resort: Resort }) => {
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
           active:translate-y-0 text-sm flex items-center justify-center gap-2"
       >
-        <span>Book Now</span>
+        <span>More Info</span>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
           className="h-4 w-4"
@@ -227,6 +227,34 @@ const BookingCTA = ({ resort }: { resort: Resort }) => {
 
 // Update the ResortCard component
 const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, onRemove: () => void }) => {
+  // Get the appropriate badge style and icon based on rank
+  const getBadgeConfig = (rank: string) => {
+    switch (rank) {
+      case 'Best Match':
+        return {
+          style: 'from-blue-400 to-blue-600',
+          icon: <Star className="w-3 h-3 mr-1" />
+        };
+      case 'Perfect Alternative':
+        return {
+          style: 'from-purple-400 to-purple-600',
+          icon: <Sparkles className="w-3 h-3 mr-1" />
+        };
+      case 'Surprise Pick':
+        return {
+          style: 'from-emerald-400 to-emerald-600',
+          icon: <Lightbulb className="w-3 h-3 mr-1" />
+        };
+      default:
+        return {
+          style: 'from-blue-400 to-blue-600',
+          icon: <Star className="w-3 h-3 mr-1" />
+        };
+    }
+  };
+
+  const badgeConfig = getBadgeConfig(rank);
+
   return (
     <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
       transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10
@@ -245,7 +273,11 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
             <div className="flex flex-col sm:flex-row items-start gap-1 flex-1">
               <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
               <div className="flex flex-wrap gap-1">
-                <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-blue-600 text-white text-sm">
+                <Badge 
+                  variant="secondary" 
+                  className={`bg-gradient-to-r ${badgeConfig.style} text-white text-sm flex items-center`}
+                >
+                  {badgeConfig.icon}
                   {rank}
                 </Badge>
                 <TooltipProvider delayDuration={100}>
@@ -653,16 +685,14 @@ CRITICAL REQUIREMENTS:
         - Suitable terrain for specified skill levels
         - Appropriate amenities for group type`}
 
-4. DIVERSE SUGGESTIONS: While maintaining focus on established resorts, provide:
-   ${answers.countries?.includes("Anywhere in Europe")
-     ? isBudgetFriendly
-       ? `- First resort MUST be from Bulgaria, Serbia, or Poland
-          - Second resort MUST be from another budget-friendly country listed above
-          - Third resort MUST also be from the budget-friendly countries list`
-       : `- Three different resorts with distinct characteristics
-          - Mix of resort sizes and atmospheres
-          - Variety of terrain types`
-     : `- Three different resorts from ${answers.countries?.join(', ')}, prioritizing the most affordable options`}
+4. DIVERSE SUGGESTIONS: Provide exactly three resorts with distinct characteristics:
+   - First resort (Best Match): The resort that best matches ALL specified criteria
+   - Second resort (Perfect Alternative): A highly suitable alternative that matches most criteria but might excel in different areas
+   - Third resort (Surprise Pick): An unexpected option that matches core requirements but offers unique features or experiences not explicitly requested
+
+Each resort suggestion should be justified with clear explanations of why it matches its respective category.
+
+IMPORTANT: Ensure each resort maintains high relevance to core requirements (location, skill level, budget) while fulfilling its specific role in the recommendation set.
 
 CRITICAL FORMAT REQUIREMENTS:
 Each resort MUST include these exact fields in this format:
@@ -1515,7 +1545,7 @@ export default function ResultsPage() {
     }
 
     fetchResults()
-  }, [complete]) // Run only on mount
+  }, []) // Run only on mount
 
   const handleRemoveResort = async (index: number) => {
     trackResortRemoval(resorts[index].name)
@@ -1670,7 +1700,7 @@ export default function ResultsPage() {
               ) : (
                 <ResortCard 
                   resort={resort} 
-                  rank={index === 0 ? 'Best Match' : index === 1 ? 'Hidden Gem' : 'Local Favorite'} 
+                  rank={index === 0 ? 'Best Match' : index === 1 ? 'Perfect Alternative' : 'Surprise Pick'} 
                   onRemove={() => handleRemoveResort(index)}
                 />
               )}
