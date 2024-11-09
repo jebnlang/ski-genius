@@ -735,7 +735,7 @@ export default function Component() {
           <div className="flex gap-3 ml-auto">
             <Button
               onClick={() => {
-                const quickAnswers = getQuickResults(answers)
+                getQuickResults(answers)
                 // Clear previous results from storage to force new API call
                 localStorage.removeItem(RESULTS_STORAGE_KEY)
                 router.push('/results')
