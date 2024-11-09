@@ -10,8 +10,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         // ... rest of the head content
       </Head>
       <div className="min-h-screen flex flex-col">
-        <main className="flex-1">
-          {children}
+        <main className="flex-1 overflow-y-auto py-6">
+          {children /* some comment */}
         </main>
         <Footer />
       </div>

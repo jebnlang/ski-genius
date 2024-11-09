@@ -1615,7 +1615,7 @@ export default function ResultsPage() {
     }
 
     fetchResults()
-  }, []) // Run only on mount
+  }, [complete]) // Run only on mount
 
   const handleRemoveResort = async (index: number) => {
     trackResortRemoval(resorts[index].name)
