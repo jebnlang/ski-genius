@@ -26,6 +26,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { trackResortView, trackResortRemoval, trackSearchRefinement } from '@/utils/analytics'
 import Fuse from 'fuse.js'
 import { Textarea } from "@/components/ui/textarea"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 // Define all necessary types
 interface StorageState {
@@ -198,14 +200,14 @@ const BookingCTA = ({ resort }: { resort: Resort }) => {
         onClick={() => {
           trackResortWebsiteClick(resort.name);
         }}
-        className="w-full bg-white bg-opacity-40 border border-white backdrop-blur-md
-          hover:bg-opacity-60 text-gray-800 font-semibold 
+        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
+          text-white font-semibold 
           rounded-full px-6 py-3 shadow-lg transform transition-all duration-300 
           hover:shadow-xl hover:-translate-y-1 hover:scale-105
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
           active:translate-y-0 text-sm flex items-center justify-center gap-2"
       >
-        <span>More Info</span>
+        <span>View Resort</span>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
           className="h-4 w-4"
@@ -256,9 +258,8 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
   const badgeConfig = getBadgeConfig(rank);
 
   return (
-    <Card className="relative bg-white bg-opacity-40 border border-white backdrop-blur-md text-gray-800 
-      transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-10
-      flex flex-col md:flex-row min-h-[180px]">
+    <Card className="relative bg-white bg-opacity-90 backdrop-blur-md shadow-md 
+      transition-all duration-300 hover:shadow-lg">
       <button 
         onClick={onRemove}
         className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 
@@ -267,118 +268,131 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
         <X className="w-4 h-4 text-gray-600" />
       </button>
 
-      <div className="flex flex-1 flex-col md:flex-row">
-        <div className="flex-1 p-3 md:p-4 border-b md:border-b-0 md:border-r border-gray-200">
-          <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-1">
-            <div className="flex flex-col sm:flex-row items-start gap-1 flex-1">
-              <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
-              <div className="flex flex-wrap gap-1">
-                <Badge 
-                  variant="secondary" 
-                  className={`bg-gradient-to-r ${badgeConfig.style} text-white text-sm flex items-center`}
-                >
-                  {badgeConfig.icon}
-                  {rank}
-                </Badge>
-                <TooltipProvider delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge 
-                        variant="outline" 
-                        className={`cursor-help transition-colors text-sm ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
-                      >
-                        {getPricingLabel(resort.pricing?.sixDayPass)}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="bg-white text-gray-800 border border-gray-200 p-2">
-                      <p className="text-sm max-w-[200px]">{getPricingTooltip(resort.pricing?.sixDayPass)}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+      <div className="flex flex-col md:flex-row">
+        {/* Main Content Section */}
+        <div className="flex-1 p-3 md:p-4">
+          {/* Resort Title, Badges, Location and Description */}
+          <div className="space-y-2 mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-1">
+              <div className="flex flex-col sm:flex-row items-start gap-1 flex-1">
+                <CardTitle className="text-xl font-bold text-gray-800">{resort.name}</CardTitle>
+                <div className="flex flex-wrap gap-1">
+                  <Badge 
+                    variant="secondary" 
+                    className={`bg-gradient-to-r ${badgeConfig.style} text-white text-sm flex items-center`}
+                  >
+                    {badgeConfig.icon}
+                    {rank}
+                  </Badge>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge 
+                          variant="outline" 
+                          className={`cursor-help transition-colors text-sm ${getPricingBadgeStyle(resort.pricing?.sixDayPass)}`}
+                        >
+                          {getPricingLabel(resort.pricing?.sixDayPass)}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-white text-gray-800 border border-gray-200 p-2">
+                        <p className="text-sm max-w-[200px]">{getPricingTooltip(resort.pricing?.sixDayPass)}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center text-sm text-gray-600 mb-2">
-            <MapPin className="w-3 h-3 mr-1" /> 
-            {resort.location}, {resort.country}
-          </div>
-
-          <div className="bg-blue-50 rounded-lg p-2 border border-blue-100 mb-2">
-            <span className="text-blue-600 font-semibold mb-1 block text-sm">Resort Highlights:</span>
-            <ul className="space-y-1">
-              {resort.highlights.map((highlight, index) => (
-                <li key={index} className="flex items-center text-gray-800">
-                  <Mountain className="w-3 h-3 mr-1 text-blue-500 flex-shrink-0" />
-                  <span className="text-sm font-medium">{highlight}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {resort.explanation && (
-            <p className="text-sm text-gray-700 italic">{resort.explanation}</p>
-          )}
-        </div>
-
-        <div className="flex-1 p-3 md:p-4 flex flex-col">
-          <div className="space-y-2 flex-1">
-            <div className="hidden sm:block">
-              <span className="text-gray-600 text-sm">Slope Distribution:</span>
-              <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
+            <div className="flex items-center text-sm text-gray-600">
+              <MapPin className="w-3 h-3 mr-1" /> 
+              {resort.location}, {resort.country}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-sm">Ski Area:</span>
-                  <p className="text-gray-800 font-medium text-sm">{resort.skiArea}</p>
-                </div>
+            {/* Moved description here */}
+            {resort.explanation && (
+              <p className="text-sm text-gray-700 italic border-l-2 border-blue-200 pl-3">
+                {resort.explanation}
+              </p>
+            )}
+          </div>
+
+          {/* Resort Details Grid */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <div className="bg-blue-50 rounded-lg p-2 border border-blue-100">
+                <span className="text-blue-600 font-semibold mb-1 block text-sm">Resort Highlights:</span>
+                <ul className="space-y-1">
+                  {resort.highlights.map((highlight, index) => (
+                    <li key={index} className="flex items-center text-gray-800">
+                      <Mountain className="w-3 h-3 mr-1 text-blue-500 flex-shrink-0" />
+                      <span className="text-sm font-medium">{highlight}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              
-              <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-sm">Lifts:</span>
-                  <p className="text-gray-800 font-medium text-sm">{resort.numberOfLifts}</p>
-                </div>
-              </div>
-              
-              <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-sm">Village:</span>
-                  <p className="text-gray-800 font-medium text-sm">{resort.villageAltitude}</p>
-                </div>
-              </div>
-              
-              <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-sm">Nightlife:</span>
-                  <div className="flex items-center">
-                    <Martini className="w-3 h-3 mr-1 text-blue-500" />
-                    <span className="text-gray-800 font-medium text-sm">{resort.nightlife}</span>
+
+              <div className="bg-green-50 rounded-lg p-2 border border-green-100">
+                <span className="text-green-600 font-semibold block mb-1 text-sm">Lift Pass Pricing:</span>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">Daily Pass:</span>
+                    <p className="text-gray-800 font-medium text-sm">{resort.pricing?.dailyPass}</p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">6-Day Pass:</span>
+                    <p className="text-gray-800 font-medium text-sm">{resort.pricing?.sixDayPass}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-green-50 rounded-lg p-2 border border-green-100">
-              <span className="text-green-600 font-semibold block mb-1 text-sm">Lift Pass Pricing:</span>
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-sm">Daily Pass:</span>
-                  <p className="text-gray-800 font-medium text-sm">{resort.pricing?.dailyPass}</p>
+            {/* Right Column */}
+            <div className="space-y-4">
+              <div className="hidden sm:block">
+                <span className="text-gray-600 text-sm">Slope Distribution:</span>
+                <DifficultyBar difficulty={resort.difficulty} runs={resort.runs} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">Ski Area:</span>
+                    <p className="text-gray-800 font-medium text-sm">{resort.skiArea}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-sm">6-Day Pass:</span>
-                  <p className="text-gray-800 font-medium text-sm">{resort.pricing?.sixDayPass}</p>
+                
+                <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">Lifts:</span>
+                    <p className="text-gray-800 font-medium text-sm">{resort.numberOfLifts}</p>
+                  </div>
+                </div>
+                
+                <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">Village:</span>
+                    <p className="text-gray-800 font-medium text-sm">{resort.villageAltitude}</p>
+                  </div>
+                </div>
+                
+                <div className="bg-white bg-opacity-50 rounded-lg p-1.5 border border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">Nightlife:</span>
+                    <div className="flex items-center">
+                      <Martini className="w-3 h-3 mr-1 text-blue-500" />
+                      <span className="text-gray-800 font-medium text-sm">{resort.nightlife}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <BookingCTA resort={resort} />
+        {/* CTA Section */}
+        <BookingCTA resort={resort} />
+      </div>
     </Card>
   )
 }
@@ -841,19 +855,29 @@ const RefinementDialog = ({
     <Dialog>
       <DialogTrigger asChild>
         <Button 
-          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
-          text-white rounded-full px-6 py-3 shadow-lg flex items-center gap-2 transition-all duration-300 
-          hover:shadow-blue-400/30 hover:shadow-xl"
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 
+            hover:from-blue-600 hover:to-blue-700 
+            text-white rounded-lg px-4 py-2.5 shadow-md 
+            flex items-center justify-center gap-2 transition-all duration-300 
+            hover:shadow-blue-400/30 hover:shadow-lg
+            border border-blue-400 text-sm"
         >
           <Filter className="w-4 h-4" />
-          Refine Search
+          <span className="font-medium">Modify Search</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto sm:max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Refine Your Search</DialogTitle>
         </DialogHeader>
         
+        {/* Mobile-friendly summary of current criteria */}
+        <div className="lg:hidden border-b border-gray-200 pb-4 mb-4">
+          <h3 className="font-semibold text-gray-700 mb-2">Current Criteria</h3>
+          <AnswersSummary answers={currentAnswers} />
+        </div>
+
+        {/* Rest of the dialog content */}
         <div className="space-y-8 py-4">
           {/* Group Type */}
           <div className="space-y-4">
@@ -1461,6 +1485,66 @@ const trackResortWebsiteClick = (resortName: string) => {
   }
 }
 
+// Add this new component after other component definitions
+const AnswersSummary = ({ answers }: { answers: StorageState['answers'] }) => {
+  const [isExpanded, setIsExpanded] = useState(true) // Default to expanded in sidebar
+
+  const summaryGroups = [
+    {
+      title: "Group & Activity",
+      items: [
+        { label: "Group Type", value: answers.groupType },
+        { label: "Children's Ages", value: answers.childrenAges?.length ? answers.childrenAges.join(", ") : "N/A" },
+        { label: "Sport Type", value: answers.sportType },
+      ]
+    },
+    {
+      title: "Location & Timing",
+      items: [
+        { label: "Preferred Countries", value: answers.countries.join(", ") },
+        { label: "Travel Time", value: answers.travelTime === 'month' ? `Specific months: ${answers.travelMonth.join(", ")}` : "Flexible" },
+      ]
+    },
+    {
+      title: "Skill Level & Preferences",
+      items: [
+        { label: "Skiing Levels", value: answers.skiingLevels.join(", ") },
+        { label: "Lessons Needed", value: answers.lessons },
+        { label: "Nightlife Preference", value: answers.nightlife },
+        { label: "Snow Park", value: answers.snowPark },
+        { label: "Off-Piste", value: answers.offPiste },
+        { label: "Ski-in/Ski-out", value: answers.skiInSkiOut },
+      ]
+    },
+    {
+      title: "Additional Preferences",
+      items: [
+        { label: "Budget", value: answers.pricingSensitivity },
+        { label: "Resort Priorities", value: answers.resortPreferences.join(", ") },
+        { label: "Other Activities", value: answers.otherActivities.length ? answers.otherActivities.join(", ") : "None selected" },
+      ]
+    }
+  ]
+
+  return (
+    <div className="space-y-4 text-sm lg:text-base">
+      {summaryGroups.map((group, index) => (
+        <div key={index} className="border-b border-gray-200 pb-4 last:border-0">
+          <h3 className="font-semibold text-gray-700 mb-2">{group.title}</h3>
+          <div className="space-y-2">
+            {group.items.map((item, itemIndex) => (
+              <div key={itemIndex} className="flex flex-wrap gap-1">
+                <span className="text-gray-600">{item.label}:</span>
+                <span className="text-gray-800 font-medium">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -1675,37 +1759,74 @@ export default function ResultsPage() {
 
   // Main content
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 relative overflow-hidden py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 relative">
       <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
       <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow"></div>
-      <div className="max-w-5xl mx-auto relative z-10">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-3">Your Perfect Ski Destinations</h1>
-          <p className="text-gray-600 mb-4">Based on your preferences, we&apos;ve found these amazing matches</p>
-          {!isLoading && !error && (
-            <div className="flex justify-center">
-              <RefinementDialog 
-                currentAnswers={JSON.parse(localStorage.getItem('ski_questionnaire_data') || '{}').answers}
-                onUpdateAnswers={handlePreferenceUpdate}
-              />
-            </div>
-          )}
-        </div>
-        
-        <div className="grid gap-4 grid-cols-1 relative group">
-          {resorts.map((resort, index) => (
-            <div key={index} className="transition-all duration-300 group-hover:opacity-50 hover:!opacity-100">
-              {loadingCards[index] ? (
-                <LoadingCard />
-              ) : (
-                <ResortCard 
-                  resort={resort} 
-                  rank={index === 0 ? 'Best Match' : index === 1 ? 'Perfect Alternative' : 'Surprise Pick'} 
-                  onRemove={() => handleRemoveResort(index)}
+      
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Column - Search Criteria (hidden on mobile) */}
+          <div className="hidden lg:block lg:w-1/5">
+            <div className="sticky top-8">
+              <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-lg shadow-md p-4">
+                <h2 className="text-xl font-semibold mb-4 text-gray-800">Search Criteria</h2>
+                
+                {/* Refine Search Button moved here */}
+                <div className="mb-6">
+                  <RefinementDialog 
+                    currentAnswers={JSON.parse(localStorage.getItem('ski_questionnaire_data') || '{}').answers}
+                    onUpdateAnswers={handlePreferenceUpdate}
+                  />
+                </div>
+
+                {/* Search Criteria Summary */}
+                <AnswersSummary 
+                  answers={JSON.parse(localStorage.getItem('ski_questionnaire_data') || '{}').answers} 
                 />
-              )}
+              </div>
             </div>
-          ))}
+          </div>
+
+          {/* Right Column - Results */}
+          <div className="flex-1">
+            {/* Results Header */}
+            <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-lg shadow-md p-6 mb-4">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800">Your Perfect Ski Destinations</h1>
+                  <p className="text-gray-600">Based on your preferences</p>
+                </div>
+                <div className="text-gray-600">
+                  {resorts.length} results found
+                </div>
+              </div>
+              
+              {/* Mobile Refine Search Button - moved here */}
+              <div className="lg:hidden mt-4">
+                <RefinementDialog 
+                  currentAnswers={JSON.parse(localStorage.getItem('ski_questionnaire_data') || '{}').answers}
+                  onUpdateAnswers={handlePreferenceUpdate}
+                />
+              </div>
+            </div>
+
+            {/* Results Cards */}
+            <div className="space-y-4">
+              {resorts.map((resort, index) => (
+                <div key={index} className="transition-all duration-300">
+                  {loadingCards[index] ? (
+                    <LoadingCard />
+                  ) : (
+                    <ResortCard 
+                      resort={resort} 
+                      rank={index === 0 ? 'Best Match' : index === 1 ? 'Perfect Alternative' : 'Surprise Pick'} 
+                      onRemove={() => handleRemoveResort(index)}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
