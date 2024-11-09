@@ -1205,8 +1205,8 @@ const areAnswersEqual = (stored: StorageState['answers'], current: StorageState[
     return sorted1.every((item, index) => item === sorted2[index])
   }
 
-  // Compare all relevant fields
-  return (
+  // Compare all fields exactly
+  const fieldsMatch = (
     stored.groupType === current.groupType &&
     compareArrays(stored.childrenAges, current.childrenAges) &&
     stored.sportType === current.sportType &&
@@ -1219,10 +1219,14 @@ const areAnswersEqual = (stored: StorageState['answers'], current: StorageState[
     stored.offPiste === current.offPiste &&
     stored.skiInSkiOut === current.skiInSkiOut &&
     compareArrays(stored.resortPreferences, current.resortPreferences) &&
-    stored.travelTime === current.travelTime && // Fixed: Compare as strings
+    compareArrays(stored.otherActivities, current.otherActivities) &&
+    stored.travelTime === current.travelTime &&
     compareArrays(stored.travelMonth, current.travelMonth) &&
     stored.additionalInfo === current.additionalInfo
   )
+
+  console.log('Answers comparison result:', fieldsMatch)
+  return fieldsMatch
 }
 
 // Update the getResortsFromStorage function
@@ -1233,17 +1237,24 @@ const getResortsFromStorage = async (currentAnswers: StorageState['answers']): P
   if (!savedResults || !savedQuestionnaire) return null
   
   try {
-    const { resorts } = JSON.parse(savedResults) as StoredResults
-    const { answers: storedAnswers } = JSON.parse(savedQuestionnaire) as StorageState
+    const { resorts, timestamp } = JSON.parse(savedResults) as StoredResults
+    const { answers: storedAnswers, lastUpdated } = JSON.parse(savedQuestionnaire) as StorageState
+
+    // Compare timestamps - if questionnaire was updated after results were stored, force new API call
+    const resultsTime = new Date(timestamp).getTime()
+    const questionnaireTime = new Date(lastUpdated).getTime()
+    
+    if (questionnaireTime > resultsTime) {
+      console.log('Questionnaire updated after last results - forcing new API call')
+      return null
+    }
 
     // Only proceed with stored resorts if the answers match exactly
     if (areAnswersEqual(storedAnswers, currentAnswers)) {
-      // Validate stored resorts against database
       const validatedResorts = await validateAgainstDatabase(resorts);
       return validatedResorts;
     }
     
-    // If answers don't match, return null to trigger new API call
     return null
   } catch (error) {
     console.error('Error parsing stored data:', error)
@@ -1435,92 +1446,76 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        // Check for questionnaire data first
+        setIsLoading(true)
+        setError(null)
+
+        // Get current answers from questionnaire storage
         const savedData = localStorage.getItem('ski_questionnaire_data')
         if (!savedData) {
-          router.push('/questionnaire')
-          return
+          throw new Error('No questionnaire data found')
         }
 
-        let parsedData: StorageState
-        try {
-          parsedData = JSON.parse(savedData)
-          console.log('Parsed questionnaire data:', parsedData)
-        } catch (e) {
-          console.error('Error parsing localStorage data:', e)
-          setError('Error loading your preferences. Please try again.')
-          router.push('/questionnaire')
-          return
-        }
+        const { answers } = JSON.parse(savedData) as StorageState
 
-        const { answers } = parsedData
-
-        // Check for stored results that match current answers
-        const storedResorts = await getResortsFromStorage(answers)
-        if (storedResorts) {
-          console.log('Using stored resort results - answers match exactly')
-          
-          // Add URL validation even for stored results
-          const validatedResorts = await validateAgainstDatabase(storedResorts)
-          setResorts(validatedResorts)
-          setIsLoading(false)
-          return
-        }
-
-        // If no matching stored results, proceed with API call
-        console.log('Fetching new results from API - answers have changed')
-        try {
+        // Try to get cached results first
+        const cachedResorts = await getResortsFromStorage(answers)
+        
+        if (cachedResorts) {
+          setResorts(cachedResorts)
+        } else {
+          // If no cached results or answers changed, make new API call
           const completion = await complete(constructPrompt(answers))
-          console.log('Raw AI response:', completion)
           
-          const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-          console.log('Cleaned AI response:', cleanedCompletion)
+          // Add robust JSON extraction
+          let cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
           
-          let parsedResorts: Resort[]
+          // Find the first [ and last ] to extract just the JSON array
+          const startIndex = cleanedCompletion.indexOf('[')
+          const endIndex = cleanedCompletion.lastIndexOf(']')
+          
+          if (startIndex === -1 || endIndex === -1) {
+            throw new Error('Invalid response format from AI')
+          }
+          
+          cleanedCompletion = cleanedCompletion.substring(startIndex, endIndex + 1)
+          
           try {
-            parsedResorts = JSON.parse(cleanedCompletion)
-            console.log('Parsed resorts:', parsedResorts)
+            const parsedResorts = JSON.parse(cleanedCompletion)
+            if (!Array.isArray(parsedResorts)) {
+              throw new Error('Response is not an array')
+            }
+            
+            const validatedResorts = validateResorts(parsedResorts, answers.countries)
+            
+            // Validate against database
+            const finalResorts = await validateAgainstDatabase(validatedResorts)
+            
+            if (finalResorts.length === 0) {
+              throw new Error('No valid resorts found')
+            }
+            
+            setResorts(finalResorts)
+            saveResortsToStorage(finalResorts)
+            
+            // Save to database
+            await saveToDatabase(answers, finalResorts)
           } catch (parseError) {
-            console.error('Error parsing AI response:', parseError)
-            throw new Error('Unable to process resort recommendations')
-          }
-          
-          if (!Array.isArray(parsedResorts) || parsedResorts.length === 0) {
-            console.error('Invalid or empty resorts array:', parsedResorts)
-            throw new Error('No resort recommendations received')
-          }
-
-          // Ensure URLs are fetched for new results
-          const validatedResorts = await validateAgainstDatabase(parsedResorts)
-          setResorts(validatedResorts)
-          saveResortsToStorage(validatedResorts)
-          
-          try {
-            await saveToDatabase(answers, validatedResorts)
-          } catch (dbError) {
-            console.error('Database error:', dbError)
-          }
-
-        } catch (apiError) {
-          console.error('API Error:', apiError)
-          setError('Unable to get resort recommendations. Please try again.')
-          
-          if (process.env.NODE_ENV === 'development') {
-            const mockValidatedResorts = await validateAgainstDatabase(mockResorts)
-            setResorts(mockValidatedResorts)
-            saveResortsToStorage(mockValidatedResorts)
+            console.error('JSON Parse Error:', parseError)
+            console.error('Raw Response:', completion)
+            throw new Error('Failed to parse resort data')
           }
         }
       } catch (error) {
-        console.error('Fetch results error:', error)
-        setError('An error occurred while loading results')
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load results'
+        setError(errorMessage)
+        console.error('Error fetching results:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchResults()
-  }, [complete, router])
+  }, []) // Run only on mount
 
   const handleRemoveResort = async (index: number) => {
     trackResortRemoval(resorts[index].name)
@@ -1628,12 +1623,21 @@ export default function ResultsPage() {
         <div className="bg-white bg-opacity-40 p-8 rounded-lg shadow-lg max-w-2xl w-full border border-white backdrop-blur-md text-center">
           <h1 className="text-3xl font-bold mb-4 text-gray-800">Oops!</h1>
           <p className="text-gray-600 mb-6">{error}</p>
-          <button 
-            onClick={() => router.push('/questionnaire')}
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            Try Again
-          </button>
+          <div className="space-y-4">
+            <Button 
+              onClick={() => window.location.reload()}
+              className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors mr-4"
+            >
+              Try Again
+            </Button>
+            <Button 
+              onClick={() => router.push('/questionnaire')}
+              variant="outline"
+              className="bg-white bg-opacity-50 text-gray-800 px-6 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              Back to Questionnaire
+            </Button>
+          </div>
         </div>
       </div>
     )

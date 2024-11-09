@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const { prompt } = await req.json()
 
   const response = await openai.createChatCompletion({
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4-1106-preview',
     stream: true,
     messages: [
       {
@@ -32,23 +32,17 @@ export async function POST(req: Request) {
             "country": "MUST match user's selected countries",
             "difficulty": { "easy": number, "intermediate": number, "advanced": number },
             "runs": { "easy": number, "intermediate": number, "advanced": number },
-            "snowCondition": "Excellent/Very Good/Good",
-            "suitableFor": string[],
             "skiArea": "size in km",
-            "liftSystem": string,
+            "numberOfLifts": number,
+            "villageAltitude": "height in m",
+            "skiRange": "min m - max m",
             "nightlife": "Vibrant/Moderate/Quiet",
-            "familyFriendly": boolean,
-            "snowPark": boolean,
-            "offPiste": boolean,
-            "skiInSkiOut": boolean,
-            "nearestAirport": string,
-            "transferTime": string,
-            "altitude": string,
-            "seasonDates": string,
-            "terrainTypes": string[],
-            "additionalActivities": string[],
             "highlights": string[],
-            "explanation": string
+            "explanation": string,
+            "pricing": {
+              "dailyPass": "€XX",
+              "sixDayPass": "€XXX"
+            }
           }
         ]
 
@@ -59,15 +53,21 @@ export async function POST(req: Request) {
           }
         ]
 
-        4. NEVER include resorts from countries not explicitly selected by the user.`
+        4. NEVER include resorts from countries not explicitly selected by the user.
+        
+        5. ALWAYS include pricing information in euros (€).
+        
+        6. ALWAYS ensure all required fields are present and properly formatted.
+
+        7. Respond quickly and concisely while maintaining accuracy.`
       },
       {
         role: 'user',
         content: prompt
       }
     ],
-    temperature: 0.5,
-    max_tokens: 2000,
+    temperature: 0.7,
+    max_tokens: 3000,
   })
 
   const stream = OpenAIStream(response)

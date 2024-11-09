@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
+import { ArrowRight } from 'lucide-react'
 
 interface Answers {
   groupType: string
@@ -47,6 +48,7 @@ const defaultAnswers: Answers = {
 }
 
 const STORAGE_KEY = 'ski_questionnaire_data'
+const RESULTS_STORAGE_KEY = 'ski-results'
 
 // Add a type for the storage state
 interface StorageState {
@@ -212,6 +214,39 @@ const hasAdvancedSkiers = (skiingLevels: string[]): boolean => {
   );
 };
 
+const getQuickResults = (currentAnswers: Answers): Answers => {
+  // Start with current answers to preserve any filled fields
+  const quickAnswers: Answers = {
+    ...defaultAnswers, // Set defaults first
+    ...currentAnswers, // Override with any existing answers
+    // Ensure critical fields have values
+    countries: currentAnswers.countries.length ? currentAnswers.countries : ['Anywhere in Europe'],
+    pricingSensitivity: currentAnswers.pricingSensitivity || 'Flexible',
+    skiingLevels: currentAnswers.skiingLevels.length ? currentAnswers.skiingLevels : ['Intermediates'],
+    nightlife: currentAnswers.nightlife || 'Moderate',
+    lessons: currentAnswers.lessons || 'No',
+    skiInSkiOut: currentAnswers.skiInSkiOut || "Don't care",
+    resortPreferences: currentAnswers.resortPreferences.length ? currentAnswers.resortPreferences : ['Extensive ski area'],
+    otherActivities: currentAnswers.otherActivities.length ? currentAnswers.otherActivities : [],
+    travelTime: currentAnswers.travelTime || 'flexible',
+    travelMonth: currentAnswers.travelMonth.length ? currentAnswers.travelMonth : [],
+    additionalInfo: currentAnswers.additionalInfo || ''
+  }
+
+  // Save to localStorage with current timestamp
+  const storageData: StorageState = {
+    answers: quickAnswers,
+    lastUpdated: new Date().toISOString(), // Ensure this is updated
+    currentStep: 12
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
+  
+  // Clear previous results to force new API call
+  localStorage.removeItem(RESULTS_STORAGE_KEY)
+
+  return quickAnswers
+}
+
 export default function Component() {
   const pathname = usePathname()
   const router = useRouter()
@@ -253,14 +288,32 @@ export default function Component() {
     if (step < totalSteps) {
       // Skip questions 8 and 9 for beginners when coming from question 7
       if (step === 7 && isBeginnerOnly(answers.skiingLevels)) {
-        navigateToStep(10);
+        navigateToStep(10)
       } else {
-        navigateToStep(step + 1);
+        navigateToStep(step + 1)
       }
     } else {
-      router.push('/results');
+      // On the final step, ensure all answers are saved before redirecting
+      const finalAnswers = {
+        ...answers,
+        // Ensure any empty required fields have defaults
+        countries: answers.countries.length ? answers.countries : ['Anywhere in Europe'],
+        pricingSensitivity: answers.pricingSensitivity || 'Flexible',
+        skiingLevels: answers.skiingLevels.length ? answers.skiingLevels : ['Intermediates']
+      }
+
+      // Save final state to localStorage
+      const storageData: StorageState = {
+        answers: finalAnswers,
+        lastUpdated: new Date().toISOString(),
+        currentStep: totalSteps
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
+
+      // Navigate to results
+      router.push('/results')
     }
-  };
+  }
 
   // Simplify handlePrevious to use the new helper
   const handlePrevious = () => {
@@ -660,6 +713,7 @@ export default function Component() {
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
       <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow"></div>
+      
       <div className="bg-white bg-opacity-40 p-8 rounded-lg shadow-lg max-w-2xl w-full border border-white backdrop-blur-md relative z-10">
         <ProgressBar currentStep={step} totalSteps={totalSteps} />
         <QuestionNav 
@@ -668,7 +722,7 @@ export default function Component() {
           setStep={handleSetStep} 
         />
         {renderQuestion()}
-        <div className="mt-8 flex justify-between">
+        <div className="mt-8 flex flex-wrap gap-3 items-center">
           {step > 1 && (
             <Button 
               onClick={handlePrevious}
@@ -678,14 +732,28 @@ export default function Component() {
               Previous
             </Button>
           )}
-          <Button 
-            onClick={handleNext}
-            className={`ml-auto bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700 transition-all duration-200 ease-in-out rounded-full px-6 py-2 shadow-md ${
-              isQuestionAnswered() ? 'opacity-100' : 'opacity-70 hover:opacity-100'
-            }`}
-          >
-            {isQuestionAnswered() ? (step < totalSteps ? 'Next' : 'Find Resorts') : 'Skip'}
-          </Button>
+          <div className="flex gap-3 ml-auto">
+            <Button
+              onClick={() => {
+                const quickAnswers = getQuickResults(answers)
+                // Clear previous results from storage to force new API call
+                localStorage.removeItem(RESULTS_STORAGE_KEY)
+                router.push('/results')
+              }}
+              variant="outline" 
+              className="bg-white/90 text-blue-600 hover:bg-blue-50 border border-blue-200 transition-all duration-200 ease-in-out rounded-full px-4 py-2 shadow-sm backdrop-blur-sm flex items-center gap-2"
+            >
+              Quick Results <ArrowRight size={16} />
+            </Button>
+            <Button 
+              onClick={handleNext}
+              className={`bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700 transition-all duration-200 ease-in-out rounded-full px-6 py-2 shadow-md ${
+                isQuestionAnswered() ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+              }`}
+            >
+              {isQuestionAnswered() ? (step < totalSteps ? 'Next' : 'Find Resorts') : 'Skip'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
