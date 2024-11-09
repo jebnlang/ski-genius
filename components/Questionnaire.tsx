@@ -215,28 +215,33 @@ const hasAdvancedSkiers = (skiingLevels: string[]): boolean => {
 };
 
 const getQuickResults = (currentAnswers: Answers): Answers => {
-  // Start with current answers to preserve any filled fields
+  // Create a new object with only the answered questions and specific defaults
   const quickAnswers: Answers = {
-    ...defaultAnswers, // Set defaults first
-    ...currentAnswers, // Override with any existing answers
-    // Ensure critical fields have values
+    // Questions with no defaults (empty if not answered)
+    groupType: currentAnswers.groupType || '',
+    childrenAges: currentAnswers.childrenAges || [],
+    sportType: currentAnswers.sportType || '',
+    skiingLevels: currentAnswers.skiingLevels || [],
+    nightlife: currentAnswers.nightlife || '',
+    skiInSkiOut: currentAnswers.skiInSkiOut || '',
+    resortPreferences: currentAnswers.resortPreferences || [],
+    otherActivities: currentAnswers.otherActivities || [],
+    additionalInfo: currentAnswers.additionalInfo || '',
+
+    // Questions with specific defaults
     countries: currentAnswers.countries.length ? currentAnswers.countries : ['Anywhere in Europe'],
     pricingSensitivity: currentAnswers.pricingSensitivity || 'Flexible',
-    skiingLevels: currentAnswers.skiingLevels.length ? currentAnswers.skiingLevels : ['Intermediates'],
-    nightlife: currentAnswers.nightlife || 'Moderate',
     lessons: currentAnswers.lessons || 'No',
-    skiInSkiOut: currentAnswers.skiInSkiOut || "Don't care",
-    resortPreferences: currentAnswers.resortPreferences.length ? currentAnswers.resortPreferences : ['Extensive ski area'],
-    otherActivities: currentAnswers.otherActivities.length ? currentAnswers.otherActivities : [],
     travelTime: currentAnswers.travelTime || 'flexible',
-    travelMonth: currentAnswers.travelMonth.length ? currentAnswers.travelMonth : [],
-    additionalInfo: currentAnswers.additionalInfo || ''
+    travelMonth: currentAnswers.travelMonth || [],
+    snowPark: '',
+    offPiste: ''
   }
 
   // Save to localStorage with current timestamp
   const storageData: StorageState = {
     answers: quickAnswers,
-    lastUpdated: new Date().toISOString(), // Ensure this is updated
+    lastUpdated: new Date().toISOString(),
     currentStep: 12
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
