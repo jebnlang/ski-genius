@@ -15,24 +15,6 @@ export const metadata = {
   },
 }
 
-// Add this type declaration for global gtag
-declare global {
-  interface Window {
-    gtag: (
-      command: string,
-      target: string,
-      config?: {
-        [key: string]: any;
-        page_path?: string;
-        resort_name?: string;
-        event_category?: string;
-        event_label?: string;
-        value?: number;
-      }
-    ) => void
-  }
-}
-
 export default function RootLayout({
   children,
 }: {
