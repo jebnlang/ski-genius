@@ -4,6 +4,7 @@ import ClientWrapper from '../components/ClientWrapper'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
+import Hotjar from '@/components/Hotjar'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <GoogleAnalytics GA_MEASUREMENT_ID="G-SBSNN37TQJ" />
+        <Hotjar siteId={5203689} hotjarVersion={6} />
       </head>
       <body 
         className={`${inter.className} flex flex-col min-h-screen`}
