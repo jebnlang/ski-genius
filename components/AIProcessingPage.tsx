@@ -18,13 +18,10 @@ const funFacts = [
   "Fresh powder snow is 97% air, making it perfect for skiing.",
   "Snow appears white because of how light reflects off ice crystals.",
   "The Alps generate 40% of Europe's fresh water from snowmelt.",
-  "Looking down the slope naturally improves your skiing posture.",
-  "Fresh snow is actually called 'powder' by experienced skiers.",
   "Blue runs in Europe are equivalent to green runs in North America.",
   "The best time for perfect snow conditions is usually mid-morning.",
   "An average skier burns 400 calories per hour on the slopes.",
   "The speed record for skiing is 254 kilometers per hour.",
-  "Over 60% of Europe's best ski resorts are located in the Alps."
 ]
 
 const CircularProgress = () => (

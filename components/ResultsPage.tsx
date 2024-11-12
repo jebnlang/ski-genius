@@ -1531,17 +1531,109 @@ const AnswersSummary = ({ answers }: { answers: StorageState['answers'] }) => {
   )
 }
 
+// Add this near the top with other constants
+const SKI_FACTS = [
+  'The word ski comes from the Old Norse word skíð meaning stick of wood',
+  'The first ski lift was invented in 1908 by Robert Winterhalder in Germany',
+  'Skiing was originally a mode of transport, used by ancient Nordic hunters',
+  'The first Winter Olympics featuring skiing was held in 1924 in Chamonix, France',
+  'Val Thorens is Europe\'s highest ski resort at 2,300m altitude',
+  'Zermatt, Switzerland offers skiing 365 days a year on its glacier',
+  'The longest ski run in Europe is 22km long, located in Alpe d\'Huez',
+  'Courchevel was the first resort purpose-built for skiing in France',
+  'St. Moritz hosted the Winter Olympics twice: in 1928 and 1948',
+  'No two snowflakes are exactly alike due to their unique crystal formation',
+  'Fresh powder snow is 97% air, making it perfect for skiing',
+  'Snow appears white because of how light reflects off ice crystals',
+  'The Alps generate 40% of Europe\'s fresh water from snowmelt',
+  'Blue runs in Europe are equivalent to green runs in North America'
+];
+
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loadingCards, setLoadingCards] = useState<{ [key: number]: boolean }>({})
   const [seenResorts, setSeenResorts] = useState<Set<string>>(new Set())
+  const [currentFact, setCurrentFact] = useState(SKI_FACTS[Math.floor(Math.random() * SKI_FACTS.length)])
+  
   const router = useRouter()
-
   const { complete } = useCompletion({
     api: '/api/chat',
   })
+
+  // Remove extra closing brace from handleRemoveResort
+  const handleRemoveResort = async (index: number) => {
+    trackResortRemoval(resorts[index].name)
+    try {
+      setLoadingCards(prev => ({ ...prev, [index]: true }))
+      
+      const currentResortNames = resorts.map(r => r.name)
+      setSeenResorts(prev => new Set([...prev, resorts[index].name]))
+      
+      const savedData = localStorage.getItem('ski_questionnaire_data')
+      if (!savedData) throw new Error('No saved preferences found')
+      
+      const { answers } = JSON.parse(savedData) as StorageState
+      
+      const excludeList = [...seenResorts, ...currentResortNames].join(', ')
+      const modifiedPrompt = constructPrompt(answers) + `\nIMPORTANT: Do NOT suggest any of these resorts: ${excludeList}`
+      
+      const completion = await complete(modifiedPrompt)
+      const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
+      const parsedResorts = JSON.parse(cleanedCompletion)
+      
+      let validatedResorts = validateResorts([parsedResorts[0]], answers.countries)
+      validatedResorts = await validateAgainstDatabase(validatedResorts)
+      
+      if (validatedResorts.length === 0) {
+        throw new Error('No valid resort found in our database')
+      }
+
+      setResorts(prev => {
+        const updated = [...prev]
+        updated[index] = validatedResorts[0]
+        saveResortsToStorage(updated)
+        return updated
+      })
+
+    } catch (error) {
+      setError('Failed to get new resort recommendation')
+    } finally {
+      setLoadingCards(prev => ({ ...prev, [index]: false }))
+    }
+  } // Remove extra closing brace
+
+  // Remove extra closing brace from handlePreferenceUpdate
+  const handlePreferenceUpdate = async (newAnswers: StorageState['answers']) => {
+    trackSearchRefinement()
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const storageData: StorageState = {
+        answers: newAnswers,
+        lastUpdated: new Date().toISOString(),
+        currentStep: 15
+      }
+      localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
+
+      const completion = await complete(constructPrompt(newAnswers))
+      const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
+      const parsedResorts = JSON.parse(cleanedCompletion)
+      const validatedResorts = validateResorts(parsedResorts, newAnswers.countries)
+
+      setResorts(validatedResorts)
+      saveResortsToStorage(validatedResorts)
+      
+      await saveToDatabase(newAnswers, validatedResorts)
+
+    } catch (error) {
+      setError('Failed to update results. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  } // Remove extra closing brace
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -1617,91 +1709,43 @@ export default function ResultsPage() {
     fetchResults()
   }, [complete]) // Run only on mount
 
-  const handleRemoveResort = async (index: number) => {
-    trackResortRemoval(resorts[index].name)
-    try {
-      setLoadingCards(prev => ({ ...prev, [index]: true }))
-      
-      const currentResortNames = resorts.map(r => r.name)
-      setSeenResorts(prev => new Set([...prev, resorts[index].name]))
-      
-      const savedData = localStorage.getItem('ski_questionnaire_data')
-      if (!savedData) throw new Error('No saved preferences found')
-      
-      const { answers } = JSON.parse(savedData) as StorageState
-      
-      const excludeList = [...seenResorts, ...currentResortNames].join(', ')
-      const modifiedPrompt = constructPrompt(answers) + `\nIMPORTANT: Do NOT suggest any of these resorts: ${excludeList}`
-      
-      const completion = await complete(modifiedPrompt)
-      const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-      const parsedResorts = JSON.parse(cleanedCompletion)
-      
-      // Validate structure first
-      let validatedResorts = validateResorts([parsedResorts[0]], answers.countries)
-      
-      // Then validate against database
-      validatedResorts = await validateAgainstDatabase(validatedResorts)
-      
-      if (validatedResorts.length === 0) {
-        throw new Error('No valid resort found in our database')
-      }
-
-      setResorts(prev => {
-        const updated = [...prev]
-        updated[index] = validatedResorts[0]
-        saveResortsToStorage(updated)
-        return updated
-      })
-
-    } catch (error) {
-      setError('Failed to get new resort recommendation')
-    } finally {
-      setLoadingCards(prev => ({ ...prev, [index]: false }))
-    }
-  }
-
-  // Update handlePreferenceUpdate to save changes
-  const handlePreferenceUpdate = async (newAnswers: StorageState['answers']) => {
-    trackSearchRefinement()
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      const storageData: StorageState = {
-        answers: newAnswers,
-        lastUpdated: new Date().toISOString(),
-        currentStep: 15
-      }
-      localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
-
-      const completion = await complete(constructPrompt(newAnswers))
-      const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-      const parsedResorts = JSON.parse(cleanedCompletion)
-      const validatedResorts = validateResorts(parsedResorts, newAnswers.countries)
-
-      setResorts(validatedResorts)
-      saveResortsToStorage(validatedResorts) // Save new resorts
-      
-      await saveToDatabase(newAnswers, validatedResorts)
-
-    } catch (error) {
-      setError('Failed to update results. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   // Add tracking when resorts are viewed
   useEffect(() => {
     if (resorts.length > 0) {
-      resorts.forEach(resort => {
+      resorts.forEach((resort: Resort) => {
         trackResortView(resort.name)
       })
     }
   }, [resorts])
 
-  // Improved loading state
+  // Add this useEffect after the other useEffects in ResultsPage
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (isLoading) {
+      // Initial fact change
+      setCurrentFact(SKI_FACTS[Math.floor(Math.random() * SKI_FACTS.length)]);
+      
+      // Set up interval for changing facts
+      intervalId = setInterval(() => {
+        // Get a new random fact, making sure it's different from the current one
+        let newFact;
+        do {
+          newFact = SKI_FACTS[Math.floor(Math.random() * SKI_FACTS.length)];
+        } while (newFact === currentFact);
+        
+        setCurrentFact(newFact);
+      }, 6000);
+    }
+
+    // Cleanup function to clear interval when component unmounts or loading state changes
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isLoading, currentFact]); // Add currentFact as dependency to ensure we don't show the same fact twice
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden">
@@ -1709,14 +1753,54 @@ export default function ResultsPage() {
         <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow"></div>
         <div className="bg-white bg-opacity-40 p-8 rounded-lg shadow-lg max-w-2xl w-full border border-white backdrop-blur-md relative z-10 text-center">
           <h1 className="text-3xl font-bold mb-4 text-gray-800">Finding Your Perfect Ski Destinations</h1>
-          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Analyzing your preferences...</p>
+          
+          {/* Improved Snowflake Spinner */}
+          <div className="flex justify-center items-center mb-8">
+            <div className="relative">
+              <div className="snowflake-spinner">
+                <div className="snowflake-glow"></div>
+                <div className="snowflake-inner">
+                  <Snowflake 
+                    size={40}
+                    strokeWidth={1.5}
+                    className="transform -rotate-45"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <p className="mt-4 mb-12 text-gray-600">Analyzing your preferences...</p>
+          
+          <div className="mt-8 max-w-md mx-auto transform transition-all duration-500 hover:scale-102">
+            <div className="bg-blue-50/80 rounded-xl p-6 border border-blue-200 shadow-md backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Lightbulb className="w-6 h-6 text-blue-600" />
+                <h3 className="text-xl font-semibold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                  Did you know?
+                </h3>
+              </div>
+              <div className="relative h-[80px] flex items-center justify-center">
+                <p 
+                  key={currentFact} 
+                  className="text-gray-700 text-lg leading-relaxed font-medium animate-fade-in"
+                  style={{
+                    animation: 'fadeIn 1s ease-in-out',
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    lineHeight: '1.6'
+                  }}
+                >
+                  {currentFact}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
-  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden p-4">
@@ -1743,7 +1827,6 @@ export default function ResultsPage() {
     )
   }
 
-  // Main content
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 relative">
       <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
@@ -1819,9 +1902,9 @@ export default function ResultsPage() {
   )
 }
 
-// Add this helper function before the RefinementDialog component
+// Helper function remains outside the component
 const hasAdvancedSkiers = (skiingLevels: string[]): boolean => {
   return skiingLevels.some(level => 
     level === 'Intermediates' || level === 'Advanced'
-  );
-};
+  )
+}
