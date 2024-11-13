@@ -1726,8 +1726,8 @@ export default function ResultsPage() {
           const completion = await complete(constructPrompt(answers))
           
           try {
-            // Parse the response
-            let parsedResponse = JSON.parse(completion || '[]')
+            // Change 'let' to 'const' since parsedResponse is never reassigned
+            const parsedResponse = JSON.parse(completion || '[]')
             
             // Handle error response from AI
             if (Array.isArray(parsedResponse) && parsedResponse.length === 1 && 'error' in parsedResponse[0]) {
