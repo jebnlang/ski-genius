@@ -521,125 +521,51 @@ const EUROPEAN_COUNTRIES = [
 
 // Validation function to check if resorts match selected countries
 const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort[] => {
-  console.log('Validating resorts:', resorts);
-  console.log('Selected countries:', selectedCountries);
+  console.log('=== Resort Validation Debug Start ===')
+  console.log('Input resorts:', resorts)
+  console.log('Selected countries:', selectedCountries)
 
   if (!Array.isArray(resorts)) {
-    console.error('Invalid resort data received:', resorts);
-    return [];
+    console.error('❌ Validation Failed: Input is not an array:', resorts)
+    throw new Error('Invalid resort data format')
   }
 
-  // Handle error response from AI
-  if (resorts.length === 1 && 'error' in resorts[0]) {
-    console.error('Error from AI:', resorts[0].error);
-    const errorMessage = String(resorts[0].error);
-    throw new Error(errorMessage);
+  if (!resorts.length) {
+    console.error('❌ Validation Failed: No resorts provided')
+    throw new Error('No resorts were found matching your criteria')
   }
 
-  // Remove duplicate resorts by name
+  // Remove duplicates
   const uniqueResorts = Array.from(
     new Map(resorts.map(resort => [resort.name.toLowerCase(), resort])).values()
-  );
+  )
 
-  // Function to get neighboring countries
-  const getNeighboringCountries = (country: string): string[] => {
-    const neighbors: { [key: string]: string[] } = {
-      'France': ['Switzerland', 'Italy', 'Germany', 'Andorra'],
-      'Switzerland': ['France', 'Italy', 'Austria', 'Germany'],
-      'Austria': ['Switzerland', 'Italy', 'Germany', 'Slovenia', 'Czech Republic'],
-      'Italy': ['France', 'Switzerland', 'Austria', 'Slovenia'],
-      // Add more neighboring countries as needed
-    };
-    return neighbors[country] || [];
-  };
+  let validResorts: Resort[] = []
 
-  // Function to find alternative resorts
-  const findAlternativeResorts = (originalResorts: Resort[], needed: number): Resort[] => {
-    if (needed <= 0) return [];
-
-    // Get neighboring countries for selected countries
-    const neighboringCountries = selectedCountries
-      .flatMap(country => getNeighboringCountries(country))
-      .filter(country => !selectedCountries.includes(country));
-
-    // First try neighboring countries
-    let alternatives = resorts.filter(resort => 
-      neighboringCountries.includes(resort.country) &&
-      !originalResorts.some(r => r.name.toLowerCase() === resort.name.toLowerCase())
-    );
-
-    // If still not enough, include resorts from the same region
-    if (alternatives.length < needed) {
-      const isEuropeFocused = selectedCountries.some(c => 
-        COUNTRIES_BY_REGION[REGIONS.EUROPE].includes(c as EuropeanCountry)
-      );
-      
-      const regionCountries = isEuropeFocused 
-        ? COUNTRIES_BY_REGION[REGIONS.EUROPE] 
-        : COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA];
-
-      alternatives = resorts.filter(resort => {
-        const isFromRegion = isEuropeFocused
-          ? COUNTRIES_BY_REGION[REGIONS.EUROPE].includes(resort.country as EuropeanCountry)
-          : COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA].includes(resort.country as NorthAmericanCountry);
-        
-        return isFromRegion && !originalResorts.some(r => r.name.toLowerCase() === resort.name.toLowerCase());
-      });
-    }
-
-    // Sort alternatives by relevance
-    alternatives.sort((a, b) => {
-      const aNeighbor = neighboringCountries.includes(a.country) ? 1 : 0;
-      const bNeighbor = neighboringCountries.includes(b.country) ? 1 : 0;
-      return bNeighbor - aNeighbor;
-    });
-
-    return alternatives.slice(0, needed);
-  };
-
-  // Main validation logic
-  let validResorts: Resort[] = [];
-
+  // Handle "Anywhere" selections
   if (selectedCountries.includes("Anywhere in Europe")) {
     validResorts = uniqueResorts.filter(resort => 
       COUNTRIES_BY_REGION[REGIONS.EUROPE].includes(resort.country as EuropeanCountry)
-    );
+    )
   } else if (selectedCountries.includes("Anywhere in North America")) {
     validResorts = uniqueResorts.filter(resort => 
       COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA].includes(resort.country as NorthAmericanCountry)
-    );
+    )
   } else if (selectedCountries.length > 0) {
-    validResorts = uniqueResorts.filter(resort => selectedCountries.includes(resort.country as string));
+    validResorts = uniqueResorts.filter(resort => selectedCountries.includes(resort.country))
   } else {
-    const allValidCountries = [
-      ...COUNTRIES_BY_REGION[REGIONS.EUROPE],
-      ...COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA]
-    ];
-    validResorts = uniqueResorts.filter(resort => 
-      allValidCountries.includes(resort.country as ResortCountry)
-    );
+    // If no countries selected, accept all resorts
+    validResorts = uniqueResorts
   }
 
-  // Ensure we have exactly 3 unique resorts
-  if (validResorts.length < 3) {
-    const alternatives = findAlternativeResorts(validResorts, 3 - validResorts.length);
-    validResorts = [...validResorts, ...alternatives];
+  console.log('Validated resorts:', validResorts)
 
-    // Add explanation for alternative suggestions
-    validResorts = validResorts.map((resort, index) => {
-      if (index >= validResorts.length - alternatives.length) {
-        return {
-          ...resort,
-          explanation: `${resort.explanation || ''} Note: This resort is suggested as an alternative option outside your selected countries, but offers similar experiences and features.`
-        };
-      }
-      return resort;
-    });
+  if (validResorts.length === 0) {
+    throw new Error(`No resorts found in selected countries (${selectedCountries.join(', ')}). Please try selecting more countries or choose 'Anywhere'.`)
   }
 
-  // Take exactly 3 unique resorts
-  return validResorts.slice(0, 3);
-};
+  return validResorts.slice(0, 3)
+}
 
 // API prompt construction
 const constructPrompt = (answers: StorageState['answers']): string => {
@@ -1617,6 +1543,117 @@ const COUNTRIES_BY_REGION = {
   ]
 } as const
 
+// Add these functions near the top with other utility functions
+
+interface DBResort {
+  resort_name: string;
+  country: string;
+  homepage_url: string;
+}
+
+// Add type for the validation list filter function
+interface ValidationListResort {
+  resort_name: string;
+  country: string;
+  homepage_url: string;
+}
+
+// Update the getValidResortsForCountries function with proper typing
+const getValidResortsForCountries = async (selectedCountries: string[]): Promise<DBResort[]> => {
+  console.log('Phase 1 - Step 1: Getting valid resorts for countries:', selectedCountries);
+  
+  try {
+    const { data, error } = await supabase
+      .from('ski_resorts_validation_list')
+      .select('resort_name, country, homepage_url');
+
+    if (error) throw error;
+    const validationList = data as ValidationListResort[];
+
+    // Filter resorts based on selected countries
+    let filteredResorts: DBResort[] = [];
+    if (selectedCountries.includes("Anywhere in Europe")) {
+      filteredResorts = validationList.filter((resort: ValidationListResort) => 
+        COUNTRIES_BY_REGION[REGIONS.EUROPE].includes(resort.country as EuropeanCountry)
+      );
+    } else if (selectedCountries.includes("Anywhere in North America")) {
+      filteredResorts = validationList.filter((resort: ValidationListResort) => 
+        COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA].includes(resort.country as NorthAmericanCountry)
+      );
+    } else {
+      filteredResorts = validationList.filter((resort: ValidationListResort) => 
+        selectedCountries.includes(resort.country)
+      );
+    }
+
+    console.log(`Found ${filteredResorts.length} valid resorts in selected countries`);
+    return filteredResorts;
+  } catch (error) {
+    console.error('Error fetching valid resorts:', error);
+    throw error;
+  }
+}
+
+// Function to modify the AI prompt with valid resorts
+const modifyPromptWithValidResorts = (basePrompt: string, validResorts: DBResort[]): string => {
+  console.log('Phase 2 - Step 1: Modifying prompt with valid resorts');
+  
+  const resortsList = validResorts.map(r => r.resort_name).join(', ');
+  
+  const modifiedPrompt = `
+${basePrompt}
+
+CRITICAL INSTRUCTIONS:
+1. You MUST ONLY choose from the following resorts. These are the only valid resorts in our database:
+${resortsList}
+
+2. RANKING APPROACH:
+   - First, try to find resorts that match ALL user preferences
+   - If perfect matches aren't available, find resorts that match the MOST IMPORTANT criteria:
+     a. Country/Location (this is non-negotiable)
+     b. Skill level compatibility
+     c. Group type suitability
+     d. Budget considerations
+   - For remaining criteria, choose resorts that partially match or offer reasonable alternatives
+
+3. RESPONSE REQUIREMENTS:
+   - Provide up to 3 best matching resorts
+   - If fewer than 3 resorts are available, return all available resorts
+   - For each resort, include a detailed explanation of why it was chosen and how it matches or differs from preferences
+   - Order results from best match to acceptable alternative
+
+4. IMPORTANT: Even if no resort perfectly matches all criteria, you MUST return the best available options from the provided list.
+
+Remember: A partial match is better than no match. Focus on finding resorts that offer the best overall experience while meeting the most critical user requirements.
+`;
+
+  console.log('Modified prompt created with', validResorts.length, 'valid resorts');
+  return modifiedPrompt;
+}
+
+// Function to process AI results and validate against DB resorts
+const processAndValidateResults = async (
+  aiResults: Resort[], 
+  validResorts: DBResort[]
+): Promise<Resort[]> => {
+  console.log('Phase 2 - Step 3: Processing AI results');
+  console.log('AI returned results:', aiResults);
+
+  // Map valid resorts for quick lookup
+  const validResortsMap = new Map(validResorts.map(r => [r.resort_name.toLowerCase(), r]));
+
+  // Filter and enrich AI results
+  const validatedResults = aiResults
+    .filter(resort => validResortsMap.has(resort.name.toLowerCase()))
+    .map(resort => ({
+      ...resort,
+      homepage_url: validResortsMap.get(resort.name.toLowerCase())?.homepage_url
+    }));
+
+  console.log('Validated results:', validatedResults);
+  return validatedResults;
+}
+
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -1624,53 +1661,62 @@ export default function ResultsPage() {
   const [loadingCards, setLoadingCards] = useState<{ [key: number]: boolean }>({})
   const [seenResorts, setSeenResorts] = useState<Set<string>>(new Set())
   const [currentFact, setCurrentFact] = useState(SKI_FACTS[Math.floor(Math.random() * SKI_FACTS.length)])
+  const [validationListCache, setValidationListCache] = useState<DBResort[] | null>(null);
   
   const router = useRouter()
   const { complete } = useCompletion({
     api: '/api/chat',
   })
 
-  // Remove extra closing brace from handleRemoveResort
+  // Keep only this optimized version of handleRemoveResort
   const handleRemoveResort = async (index: number) => {
-    trackResortRemoval(resorts[index].name)
+    trackResortRemoval(resorts[index].name);
     try {
-      setLoadingCards(prev => ({ ...prev, [index]: true }))
+      setLoadingCards(prev => ({ ...prev, [index]: true }));
       
-      const currentResortNames = resorts.map(r => r.name)
-      setSeenResorts(prev => new Set([...prev, resorts[index].name]))
+      const currentResortNames = resorts.map(r => r.name);
+      setSeenResorts(prev => new Set([...prev, resorts[index].name]));
       
-      const savedData = localStorage.getItem('ski_questionnaire_data')
-      if (!savedData) throw new Error('No saved preferences found')
+      const savedData = localStorage.getItem('ski_questionnaire_data');
+      if (!savedData) throw new Error('No saved preferences found');
       
-      const { answers } = JSON.parse(savedData) as StorageState
+      const { answers } = JSON.parse(savedData) as StorageState;
       
-      const excludeList = [...seenResorts, ...currentResortNames].join(', ')
-      const modifiedPrompt = constructPrompt(answers) + `\nIMPORTANT: Do NOT suggest any of these resorts: ${excludeList}`
+      // Get valid resorts and construct prompt in parallel
+      const excludeList = [...seenResorts, ...currentResortNames].join(', ');
+      const [validResorts, basePrompt] = await Promise.all([
+        getValidResortsForCountries(answers.countries),
+        Promise.resolve(constructPrompt(answers))
+      ]);
+
+      const modifiedPrompt = modifyPromptWithValidResorts(
+        basePrompt + `\nIMPORTANT: Do NOT suggest any of these resorts: ${excludeList}`,
+        validResorts
+      );
       
-      const completion = await complete(modifiedPrompt)
-      const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-      const parsedResorts = JSON.parse(cleanedCompletion)
+      const completion = await complete(modifiedPrompt);
+      const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]';
+      const parsedResorts = JSON.parse(cleanedCompletion);
       
-      let validatedResorts = validateResorts([parsedResorts[0]], answers.countries)
-      validatedResorts = await validateAgainstDatabase(validatedResorts)
+      const validatedResorts = await processAndValidateResults([parsedResorts[0]], validResorts);
       
       if (validatedResorts.length === 0) {
-        throw new Error('No valid resort found in our database')
+        throw new Error('No valid resort found in our database');
       }
 
       setResorts(prev => {
-        const updated = [...prev]
-        updated[index] = validatedResorts[0]
-        saveResortsToStorage(updated)
-        return updated
-      })
+        const updated = [...prev];
+        updated[index] = validatedResorts[0];
+        saveResortsToStorage(updated);
+        return updated;
+      });
 
     } catch (error) {
-      setError('Failed to get new resort recommendation')
+      setError('Failed to get new resort recommendation');
     } finally {
-      setLoadingCards(prev => ({ ...prev, [index]: false }))
+      setLoadingCards(prev => ({ ...prev, [index]: false }));
     }
-  } // Remove extra closing brace
+  };
 
   // Remove extra closing brace from handlePreferenceUpdate
   const handlePreferenceUpdate = async (newAnswers: StorageState['answers']) => {
@@ -1706,66 +1752,71 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        setIsLoading(true)
-        setError(null)
+        setIsLoading(true);
+        setError(null);
 
-        // Get current answers from questionnaire storage
-        const savedData = localStorage.getItem('ski_questionnaire_data')
+        const savedData = localStorage.getItem('ski_questionnaire_data');
         if (!savedData) {
-          throw new Error('No questionnaire data found')
+          throw new Error('No questionnaire data found');
         }
 
-        const { answers } = JSON.parse(savedData) as StorageState
+        const { answers } = JSON.parse(savedData) as StorageState;
 
-        // Try to get cached results first
-        const cachedResorts = await getResortsFromStorage(answers)
+        // Try cached results first
+        const cachedResults = await getResortsFromStorage(answers);
+        if (cachedResults) {
+          console.log('Using cached results:', cachedResults);
+          setResorts(cachedResults);
+          setIsLoading(false);
+          return;
+        }
+
+        // Start parallel processing
+        const [validResorts, basePrompt] = await Promise.all([
+          getValidResortsForCountries(answers.countries),
+          Promise.resolve(constructPrompt(answers))
+        ]);
+
+        if (validResorts.length === 0) {
+          throw new Error('No resorts found in selected countries. Please try different countries.');
+        }
+
+        // Modify prompt with valid resorts
+        const modifiedPrompt = modifyPromptWithValidResorts(basePrompt, validResorts);
         
-        if (cachedResorts) {
-          setResorts(cachedResorts)
-        } else {
-          const completion = await complete(constructPrompt(answers))
-          
-          try {
-            // Change 'let' to 'const' since parsedResponse is never reassigned
-            const parsedResponse = JSON.parse(completion || '[]')
-            
-            // Handle error response from AI
-            if (Array.isArray(parsedResponse) && parsedResponse.length === 1 && 'error' in parsedResponse[0]) {
-              throw new Error(parsedResponse[0].error)
-            }
-
-            // Validate resorts against selected countries
-            const validatedResorts = validateResorts(parsedResponse, answers.countries)
-            
-            // Validate against database
-            const finalResorts = await validateAgainstDatabase(validatedResorts)
-            
-            if (finalResorts.length === 0) {
-              throw new Error('No valid resorts found for your criteria. Please try adjusting your preferences.')
-            }
-            
-            setResorts(finalResorts)
-            saveResortsToStorage(finalResorts)
-            
-            // Save to database
-            await saveToDatabase(answers, finalResorts)
-          } catch (parseError) {
-            console.error('JSON Parse Error:', parseError)
-            console.error('Raw Response:', completion)
-            throw new Error(parseError instanceof Error ? parseError.message : 'Failed to parse resort data')
-          }
+        // Make AI API call
+        const completion = await complete(modifiedPrompt);
+        if (!completion) {
+          throw new Error('No response from recommendation service');
         }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to load results'
-        setError(errorMessage)
-        console.error('Error fetching results:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
 
-    fetchResults()
-  }, [complete]) // Run only on mount
+        // Parse and validate results
+        const cleanedCompletion = completion.replace(/```json\n?|\n?```/g, '').trim();
+        const parsedResorts = JSON.parse(cleanedCompletion);
+
+        // Process results and save to database in parallel
+        const [finalResorts] = await Promise.all([
+          processAndValidateResults(parsedResorts, validResorts),
+          saveToDatabase(answers, parsedResorts)
+        ]);
+
+        if (finalResorts.length === 0) {
+          throw new Error('No valid resorts found matching your criteria');
+        }
+
+        setResorts(finalResorts);
+        saveResortsToStorage(finalResorts);
+
+      } catch (error) {
+        console.error('Fetch Results Error:', error);
+        setError(error instanceof Error ? error.message : 'Failed to get resort recommendations');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchResults();
+  }, [complete]);
 
   // Add tracking when resorts are viewed
   useEffect(() => {
@@ -1776,33 +1827,30 @@ export default function ResultsPage() {
     }
   }, [resorts])
 
-  // Add this useEffect after the other useEffects in ResultsPage
+  // Update the useEffect for ski facts
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
     if (isLoading) {
-      // Initial fact change
-      setCurrentFact(SKI_FACTS[Math.floor(Math.random() * SKI_FACTS.length)]);
+      // Get initial random fact without comparison
+      const getRandomFact = () => {
+        const randomIndex = Math.floor(Math.random() * SKI_FACTS.length);
+        setCurrentFact(SKI_FACTS[randomIndex]);
+      };
+
+      // Set initial fact
+      getRandomFact();
       
-      // Set up interval for changing facts
-      intervalId = setInterval(() => {
-        // Get a new random fact, making sure it's different from the current one
-        let newFact;
-        do {
-          newFact = SKI_FACTS[Math.floor(Math.random() * SKI_FACTS.length)];
-        } while (newFact === currentFact);
-        
-        setCurrentFact(newFact);
-      }, 6000);
+      // Set up interval
+      intervalId = setInterval(getRandomFact, 6000);
     }
 
-    // Cleanup function to clear interval when component unmounts or loading state changes
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
       }
     };
-  }, [isLoading, currentFact]); // Add currentFact as dependency to ensure we don't show the same fact twice
+  }, [isLoading]); // Only depend on isLoading state
 
   if (isLoading) {
     return (
