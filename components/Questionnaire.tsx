@@ -214,6 +214,36 @@ const hasAdvancedSkiers = (skiingLevels: string[]): boolean => {
   );
 };
 
+// Add the same region constants at the top of the file
+const REGIONS = {
+  EUROPE: 'Europe',
+  NORTH_AMERICA: 'North America'
+} as const
+
+const COUNTRIES_BY_REGION = {
+  [REGIONS.EUROPE]: [
+    'France',
+    'Austria',
+    'Switzerland',
+    'Italy',
+    'Germany',
+    'Norway',
+    'Sweden',
+    'Spain',
+    'Bulgaria',
+    'Slovenia',
+    'Czech Republic',
+    'Poland',
+    'Finland',
+    'Andorra',
+    'Greece'
+  ],
+  [REGIONS.NORTH_AMERICA]: [
+    'United States',
+    'Canada'
+  ]
+} as const
+
 const getQuickResults = (currentAnswers: Answers): Answers => {
   // Create a new object with only the answered questions and specific defaults
   const quickAnswers: Answers = {
@@ -229,7 +259,7 @@ const getQuickResults = (currentAnswers: Answers): Answers => {
     additionalInfo: currentAnswers.additionalInfo || '',
 
     // Questions with specific defaults
-    countries: currentAnswers.countries.length ? currentAnswers.countries : ['Anywhere in Europe'],
+    countries: currentAnswers.countries.length ? currentAnswers.countries : ['Anywhere in Europe', 'Anywhere in North America'],
     pricingSensitivity: currentAnswers.pricingSensitivity || 'Flexible',
     lessons: currentAnswers.lessons || 'No',
     travelTime: currentAnswers.travelTime || 'flexible',
@@ -405,61 +435,127 @@ export default function Component() {
         )
       case 3:
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <h2 className="text-3xl font-bold mb-6 text-gray-800">Where would you like to ski?</h2>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                'Anywhere in Europe',
-                'France',
-                'Austria',
-                'Switzerland',
-                'Italy',
-                'Germany',
-                'Norway',
-                'Sweden',
-                'Spain',
-                'Bulgaria',
-                'Slovenia',
-                'Czech Republic',
-                'Poland',
-                'Finland',
-                'Andorra',
-                'Greece'
-              ].map((country) => (
-                <div key={country} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={country}
-                    checked={answers.countries.includes(country)}
-                    onCheckedChange={(checked) => {
-                      let newCountries: string[];
-                      if (country === 'Anywhere in Europe') {
-                        newCountries = checked ? ['Anywhere in Europe'] : [];
-                      } else {
+            
+            {/* Europe Section */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-gray-700">Europe</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="anywhere-europe"
+                      checked={answers.countries.includes("Anywhere in Europe")}
+                      onCheckedChange={(checked) => {
+                        let newCountries: string[];
+                        if (checked) {
+                          newCountries = ["Anywhere in Europe"];
+                        } else {
+                          newCountries = [];
+                        }
+                        updateAnswers({ countries: newCountries });
+                      }}
+                      className="border-blue-500 text-blue-500"
+                    />
+                    <Label 
+                      htmlFor="anywhere-europe" 
+                      className="text-gray-800 hover:text-blue-500 transition-colors"
+                    >
+                      Anywhere in Europe
+                    </Label>
+                  </div>
+                </div>
+                {COUNTRIES_BY_REGION[REGIONS.EUROPE].map((country) => (
+                  <div key={country} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={country}
+                      checked={answers.countries.includes(country)}
+                      onCheckedChange={(checked) => {
+                        let newCountries: string[];
                         if (checked) {
                           newCountries = [
-                            ...answers.countries.filter(c => c !== 'Anywhere in Europe'),
+                            ...answers.countries.filter(c => !c.includes("Anywhere")),
                             country
                           ];
                         } else {
                           newCountries = answers.countries.filter(c => c !== country);
-                          if (newCountries.length === 0) {
-                            newCountries = ['Anywhere in Europe'];
-                          }
                         }
-                      }
-                      updateAnswers({ countries: newCountries });
-                      console.log('Updated countries:', newCountries);
-                    }}
-                    className="border-blue-500 text-blue-500"
-                  />
-                  <Label 
-                    htmlFor={country} 
-                    className="text-gray-800 hover:text-blue-500 transition-colors"
-                  >
-                    {country}
-                  </Label>
+                        updateAnswers({ countries: newCountries });
+                      }}
+                      className="border-blue-500 text-blue-500"
+                      disabled={answers.countries.includes("Anywhere in Europe") || 
+                               answers.countries.includes("Anywhere in North America")}
+                    />
+                    <Label 
+                      htmlFor={country} 
+                      className="text-gray-800 hover:text-blue-500 transition-colors"
+                    >
+                      {country}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* North America Section */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-gray-700">North America</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="anywhere-na"
+                      checked={answers.countries.includes("Anywhere in North America")}
+                      onCheckedChange={(checked) => {
+                        let newCountries: string[];
+                        if (checked) {
+                          newCountries = ["Anywhere in North America"];
+                        } else {
+                          newCountries = [];
+                        }
+                        updateAnswers({ countries: newCountries });
+                      }}
+                      className="border-blue-500 text-blue-500"
+                    />
+                    <Label 
+                      htmlFor="anywhere-na" 
+                      className="text-gray-800 hover:text-blue-500 transition-colors"
+                    >
+                      Anywhere in North America
+                    </Label>
+                  </div>
                 </div>
-              ))}
+                {COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA].map((country) => (
+                  <div key={country} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={country}
+                      checked={answers.countries.includes(country)}
+                      onCheckedChange={(checked) => {
+                        let newCountries: string[];
+                        if (checked) {
+                          newCountries = [
+                            ...answers.countries.filter(c => !c.includes("Anywhere")),
+                            country
+                          ];
+                        } else {
+                          newCountries = answers.countries.filter(c => c !== country);
+                        }
+                        updateAnswers({ countries: newCountries });
+                      }}
+                      className="border-blue-500 text-blue-500"
+                      disabled={answers.countries.includes("Anywhere in Europe") || 
+                               answers.countries.includes("Anywhere in North America")}
+                    />
+                    <Label 
+                      htmlFor={country} 
+                      className="text-gray-800 hover:text-blue-500 transition-colors"
+                    >
+                      {country}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )

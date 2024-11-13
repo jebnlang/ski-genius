@@ -55,10 +55,15 @@ interface StorageState {
 
 type SnowCondition = "Powder" | "Groomed" | "Packed" | "Ice" | "Spring"
 
+// First, let's define a proper type for resort countries
+type EuropeanCountry = typeof COUNTRIES_BY_REGION[typeof REGIONS.EUROPE][number];
+type NorthAmericanCountry = typeof COUNTRIES_BY_REGION[typeof REGIONS.NORTH_AMERICA][number];
+type ResortCountry = EuropeanCountry | NorthAmericanCountry;
+
 interface Resort {
   name: string
   location: string
-  country: string
+  country: ResortCountry
   difficulty: {
     easy: number
     intermediate: number
@@ -524,80 +529,117 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
     return [];
   }
 
-  // Basic data validation with more detailed logging
-  const isValidResort = (resort: Resort): boolean => {
-    const requiredFields = {
-      name: typeof resort.name === 'string',
-      location: typeof resort.location === 'string',
-      country: typeof resort.country === 'string',
-      difficulty: resort.difficulty && typeof resort.difficulty === 'object' &&
-        typeof resort.difficulty.easy === 'number' &&
-        typeof resort.difficulty.intermediate === 'number' &&
-        typeof resort.difficulty.advanced === 'number',
-      runs: resort.runs && typeof resort.runs === 'object' &&
-        typeof resort.runs.easy === 'number' &&
-        typeof resort.runs.intermediate === 'number' &&
-        typeof resort.runs.advanced === 'number',
-      skiArea: typeof resort.skiArea === 'string',
-      nightlife: ['Vibrant', 'Moderate', 'Quiet'].includes(resort.nightlife),
-      highlights: Array.isArray(resort.highlights),
-      website: typeof resort.website === 'string'
-    };
-
-    const invalidFields = Object.entries(requiredFields)
-      .filter(([_, isValid]) => !isValid)
-      .map(([field]) => field);
-
-    if (invalidFields.length > 0) {
-      console.error('Invalid fields for resort:', resort.name, invalidFields);
-    }
-
-    return Object.values(requiredFields).every(Boolean);
-  };
-
-  // Filter out invalid resorts and ensure required fields
-  const validResorts = resorts.map(resort => ({
-    ...resort,
-    nightlife: ['Vibrant', 'Moderate', 'Quiet'].includes(resort.nightlife) 
-      ? resort.nightlife 
-      : 'Moderate',
-    pricing: resort.pricing || { dailyPass: 'N/A', sixDayPass: 'N/A' },
-    snow_condition: resort.snow_condition || 'Packed',
-    villageAltitude: resort.villageAltitude || 'N/A',
-    skiRange: resort.skiRange || 'N/A',
-    numberOfLifts: resort.numberOfLifts || 0,
-    website: resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`
-  })).filter(isValidResort);
-
-  console.log('Valid resorts after basic validation:', validResorts);
-
-  if (validResorts.length === 0) {
-    console.error('No valid resort data found');
-    return [];
+  // Handle error response from AI
+  if (resorts.length === 1 && 'error' in resorts[0]) {
+    console.error('Error from AI:', resorts[0].error);
+    const errorMessage = String(resorts[0].error);
+    throw new Error(errorMessage);
   }
 
-  // If "Anywhere in Europe" is selected or no specific countries selected, 
-  // return all valid resorts since they're all European anyway
-  if (selectedCountries.includes("Anywhere in Europe") || selectedCountries.length === 0) {
-    console.log('Returning all valid resorts for Anywhere in Europe');
-    return validResorts;
-  }
-
-  // Filter by specific countries if selected
-  const countryMatchedResorts = validResorts.filter(resort => 
-    selectedCountries.includes(resort.country)
+  // Remove duplicate resorts by name
+  const uniqueResorts = Array.from(
+    new Map(resorts.map(resort => [resort.name.toLowerCase(), resort])).values()
   );
 
-  console.log('Country matched resorts:', countryMatchedResorts);
+  // Function to get neighboring countries
+  const getNeighboringCountries = (country: string): string[] => {
+    const neighbors: { [key: string]: string[] } = {
+      'France': ['Switzerland', 'Italy', 'Germany', 'Andorra'],
+      'Switzerland': ['France', 'Italy', 'Austria', 'Germany'],
+      'Austria': ['Switzerland', 'Italy', 'Germany', 'Slovenia', 'Czech Republic'],
+      'Italy': ['France', 'Switzerland', 'Austria', 'Slovenia'],
+      // Add more neighboring countries as needed
+    };
+    return neighbors[country] || [];
+  };
 
-  // If no matches found for specific countries, return all valid resorts
-  if (countryMatchedResorts.length === 0) {
-    console.log('No country matches found, returning all valid resorts');
-    return validResorts;
+  // Function to find alternative resorts
+  const findAlternativeResorts = (originalResorts: Resort[], needed: number): Resort[] => {
+    if (needed <= 0) return [];
+
+    // Get neighboring countries for selected countries
+    const neighboringCountries = selectedCountries
+      .flatMap(country => getNeighboringCountries(country))
+      .filter(country => !selectedCountries.includes(country));
+
+    // First try neighboring countries
+    let alternatives = resorts.filter(resort => 
+      neighboringCountries.includes(resort.country) &&
+      !originalResorts.some(r => r.name.toLowerCase() === resort.name.toLowerCase())
+    );
+
+    // If still not enough, include resorts from the same region
+    if (alternatives.length < needed) {
+      const isEuropeFocused = selectedCountries.some(c => 
+        COUNTRIES_BY_REGION[REGIONS.EUROPE].includes(c as EuropeanCountry)
+      );
+      
+      const regionCountries = isEuropeFocused 
+        ? COUNTRIES_BY_REGION[REGIONS.EUROPE] 
+        : COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA];
+
+      alternatives = resorts.filter(resort => {
+        const isFromRegion = isEuropeFocused
+          ? COUNTRIES_BY_REGION[REGIONS.EUROPE].includes(resort.country as EuropeanCountry)
+          : COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA].includes(resort.country as NorthAmericanCountry);
+        
+        return isFromRegion && !originalResorts.some(r => r.name.toLowerCase() === resort.name.toLowerCase());
+      });
+    }
+
+    // Sort alternatives by relevance
+    alternatives.sort((a, b) => {
+      const aNeighbor = neighboringCountries.includes(a.country) ? 1 : 0;
+      const bNeighbor = neighboringCountries.includes(b.country) ? 1 : 0;
+      return bNeighbor - aNeighbor;
+    });
+
+    return alternatives.slice(0, needed);
+  };
+
+  // Main validation logic
+  let validResorts: Resort[] = [];
+
+  if (selectedCountries.includes("Anywhere in Europe")) {
+    validResorts = uniqueResorts.filter(resort => 
+      COUNTRIES_BY_REGION[REGIONS.EUROPE].includes(resort.country as EuropeanCountry)
+    );
+  } else if (selectedCountries.includes("Anywhere in North America")) {
+    validResorts = uniqueResorts.filter(resort => 
+      COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA].includes(resort.country as NorthAmericanCountry)
+    );
+  } else if (selectedCountries.length > 0) {
+    validResorts = uniqueResorts.filter(resort => selectedCountries.includes(resort.country as string));
+  } else {
+    const allValidCountries = [
+      ...COUNTRIES_BY_REGION[REGIONS.EUROPE],
+      ...COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA]
+    ];
+    validResorts = uniqueResorts.filter(resort => 
+      allValidCountries.includes(resort.country as ResortCountry)
+    );
   }
 
-  return countryMatchedResorts;
-}
+  // Ensure we have exactly 3 unique resorts
+  if (validResorts.length < 3) {
+    const alternatives = findAlternativeResorts(validResorts, 3 - validResorts.length);
+    validResorts = [...validResorts, ...alternatives];
+
+    // Add explanation for alternative suggestions
+    validResorts = validResorts.map((resort, index) => {
+      if (index >= validResorts.length - alternatives.length) {
+        return {
+          ...resort,
+          explanation: `${resort.explanation || ''} Note: This resort is suggested as an alternative option outside your selected countries, but offers similar experiences and features.`
+        };
+      }
+      return resort;
+    });
+  }
+
+  // Take exactly 3 unique resorts
+  return validResorts.slice(0, 3);
+};
 
 // API prompt construction
 const constructPrompt = (answers: StorageState['answers']): string => {
@@ -662,6 +704,10 @@ const constructPrompt = (answers: StorageState['answers']): string => {
          - Balanced food and drink prices
          - Good quality-to-price ratio for facilities`
 
+  const locationRequirement = answers.countries?.includes("Anywhere in Europe") || answers.countries?.includes("Anywhere in North America")
+    ? `User is open to resorts in ${answers.countries.join(', ')}. ONLY suggest resorts from these regions.`
+    : `YOU MUST ONLY SUGGEST RESORTS FROM: ${answers.countries?.join(', ')}. This is a non-negotiable requirement.`;
+
   return `Based on the following user preferences from the questionnaire:
 
 Experience Level: ${answers.skiingLevels?.join(', ')}
@@ -674,9 +720,7 @@ Off-Piste Interest: ${answers.offPiste}
 Ski-in/Ski-out Preference: ${answers.skiInSkiOut}
 
 CRITICAL REQUIREMENTS:
-1. LOCATION REQUIREMENT: ${answers.countries?.includes("Anywhere in Europe")
-     ? "User is open to any European resort that matches their preferences. ONLY suggest resorts from European countries."
-     : `YOU MUST ONLY SUGGEST RESORTS FROM: ${answers.countries?.join(', ')}. This is a non-negotiable requirement.`}
+1. LOCATION REQUIREMENT: ${locationRequirement}
 
 2. ${pricingGuidance}
 
@@ -931,54 +975,93 @@ const RefinementDialog = ({
           </div>
 
           {/* Location */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Label className="text-lg font-semibold">Where would you like to ski?</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                'Anywhere in Europe',
-                'France',
-                'Austria',
-                'Switzerland',
-                'Italy',
-                'Germany',
-                'Norway',
-                'Sweden',
-                'Spain',
-                'Bulgaria',
-                'Slovenia',
-                'Czech Republic',
-                'Poland',
-                'Finland',
-                'Andorra',
-                'Greece'
-              ].map((country) => (
-                <div key={country} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`country-${country}`}
-                    checked={tempAnswers.countries.includes(country)}
-                    onCheckedChange={(checked) => {
-                      let newCountries: string[];
-                      if (country === 'Anywhere in Europe') {
-                        newCountries = checked ? ['Anywhere in Europe'] : [];
-                      } else {
-                        if (checked) {
-                          newCountries = [
-                            ...tempAnswers.countries.filter(c => c !== 'Anywhere in Europe'),
-                            country
-                          ];
-                        } else {
-                          newCountries = tempAnswers.countries.filter(c => c !== country);
-                          if (newCountries.length === 0) {
-                            newCountries = ['Anywhere in Europe'];
-                          }
-                        }
-                      }
-                      setTempAnswers(prev => ({ ...prev, countries: newCountries }));
-                    }}
-                  />
-                  <Label htmlFor={`country-${country}`}>{country}</Label>
+            
+            {/* Europe Section */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-gray-700">Europe</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="anywhere-europe"
+                      checked={tempAnswers.countries.includes("Anywhere in Europe")}
+                      onCheckedChange={(checked) => {
+                        setTempAnswers(prev => ({
+                          ...prev,
+                          countries: checked 
+                            ? ["Anywhere in Europe"]
+                            : []
+                        }))
+                      }}
+                    />
+                    <Label htmlFor="anywhere-europe">Anywhere in Europe</Label>
+                  </div>
                 </div>
-              ))}
+                {COUNTRIES_BY_REGION[REGIONS.EUROPE].map((country) => (
+                  <div key={country} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`country-${country}`}
+                      checked={tempAnswers.countries.includes(country)}
+                      onCheckedChange={(checked) => {
+                        setTempAnswers(prev => ({
+                          ...prev,
+                          countries: checked
+                            ? [...prev.countries.filter(c => !c.includes("Anywhere")), country]
+                            : prev.countries.filter(c => c !== country)
+                        }))
+                      }}
+                      disabled={tempAnswers.countries.includes("Anywhere in Europe") || 
+                               tempAnswers.countries.includes("Anywhere in North America")}
+                    />
+                    <Label htmlFor={`country-${country}`}>{country}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* North America Section */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-gray-700">North America</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="anywhere-na"
+                      checked={tempAnswers.countries.includes("Anywhere in North America")}
+                      onCheckedChange={(checked) => {
+                        setTempAnswers(prev => ({
+                          ...prev,
+                          countries: checked 
+                            ? ["Anywhere in North America"]
+                            : []
+                        }))
+                      }}
+                    />
+                    <Label htmlFor="anywhere-na">Anywhere in North America</Label>
+                  </div>
+                </div>
+                {COUNTRIES_BY_REGION[REGIONS.NORTH_AMERICA].map((country) => (
+                  <div key={country} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`country-${country}`}
+                      checked={tempAnswers.countries.includes(country)}
+                      onCheckedChange={(checked) => {
+                        setTempAnswers(prev => ({
+                          ...prev,
+                          countries: checked
+                            ? [...prev.countries.filter(c => !c.includes("Anywhere")), country]
+                            : prev.countries.filter(c => c !== country)
+                        }))
+                      }}
+                      disabled={tempAnswers.countries.includes("Anywhere in Europe") || 
+                               tempAnswers.countries.includes("Anywhere in North America")}
+                    />
+                    <Label htmlFor={`country-${country}`}>{country}</Label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1345,118 +1428,73 @@ const getResortUrl = async (resortName: string): Promise<string | null> => {
 
 // Update the validateAgainstDatabase function
 const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => {
-  try {
-    console.log('Starting database validation for resorts:', resorts.map(r => r.name));
+  console.log('Starting database validation for resorts:', resorts);
+  
+  if (!resorts.length) {
+    throw new Error('No resorts to validate');
+  }
 
+  try {
+    // Get the validation list from Supabase
     const { data: validationList, error } = await supabase
       .from('ski_resorts_validation_list')
       .select('resort_name, homepage_url');
 
     if (error) {
-      console.error('Error fetching validation list:', error);
-      return resorts;
+      console.error('Database validation error:', error);
+      return resorts; // Return original resorts if validation fails
     }
 
-    if (!validationList || validationList.length === 0) {
-      console.error('No validation data received from database');
-      return resorts;
-    }
+    console.log(`Found ${validationList?.length} resorts in validation list`);
 
-    console.log(`Found ${validationList.length} resorts in validation list`);
-
-    // Create maps for different types of matches
-    const exactMatchMap = new Map(
-      validationList.map(item => [item.resort_name.toLowerCase(), item])
-    );
-
-    const partialMatchMap = new Map(
-      validationList.map(item => [item.resort_name.toLowerCase().replace(/[^a-z0-9]/g, ''), item])
-    );
-
-    const validatedResorts = await Promise.all(resorts.map(async (resort) => {
-      const resortName = resort.name.toLowerCase();
-      const cleanResortName = resortName.replace(/[^a-z0-9]/g, '');
+    // Function to find closest match in validation list
+    const findMatch = (resortName: string) => {
+      console.log('\nValidating resort:', resortName);
       
-      console.log(`\nValidating resort: ${resort.name}`);
-
       // Try exact match first
-      const exactMatch = exactMatchMap.get(resortName);
+      const exactMatch = validationList?.find(v => 
+        v.resort_name.toLowerCase() === resortName.toLowerCase()
+      );
+
       if (exactMatch) {
         console.log('Found exact match:', exactMatch);
-        return {
-          ...resort,
-          name: exactMatch.resort_name,
-          website: exactMatch.homepage_url
-        };
+        return exactMatch;
       }
 
-      // Try partial matches with cleaned names
-      const partialMatch = Array.from(partialMatchMap.entries()).find(([key, value]) => 
-        key.includes(cleanResortName) || cleanResortName.includes(key)
-      );
-      
-      if (partialMatch) {
-        console.log('Found partial match:', partialMatch[1]);
-        return {
-          ...resort,
-          name: partialMatch[1].resort_name,
-          website: partialMatch[1].homepage_url
-        };
-      }
-
-      // Try fuzzy matching as a last resort
-      const fuse = new Fuse(validationList, {
+      // If no exact match, try fuzzy match
+      const fuse = new Fuse(validationList || [], {
         keys: ['resort_name'],
-        threshold: 0.3, // Lower threshold for stricter matching
-        includeScore: true
+        threshold: 0.3
       });
 
-      const fuzzyMatches = fuse.search(resort.name);
-      if (fuzzyMatches.length > 0 && fuzzyMatches[0].score && fuzzyMatches[0].score < 0.6) {
+      const fuzzyMatches = fuse.search(resortName);
+      if (fuzzyMatches.length > 0) {
         console.log('Found fuzzy match:', fuzzyMatches[0].item);
-        return {
-          ...resort,
-          name: fuzzyMatches[0].item.resort_name,
-          website: fuzzyMatches[0].item.homepage_url
-        };
+        return fuzzyMatches[0].item;
       }
 
-      // If no match found, try one final direct database query
-      const { data: directMatch } = await supabase
-        .from('ski_resorts_validation_list')
-        .select('resort_name, homepage_url')
-        .ilike('resort_name', `%${resort.name}%`)
-        .limit(1)
-        .single();
+      console.log('No match found for:', resortName);
+      return null;
+    };
 
-      if (directMatch) {
-        console.log('Found direct database match:', directMatch);
-        return {
-          ...resort,
-          name: directMatch.resort_name,
-          website: directMatch.homepage_url
-        };
-      }
+    // Validate each resort
+    return resorts.map(resort => {
+      const match = findMatch(resort.name);
+      
+      // Log validation results
+      console.log('Resort:', resort.name);
+      console.log('Website:', match?.homepage_url || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`);
+      console.log('Is fallback URL:', !match?.homepage_url);
 
-      console.log('No match found for:', resort.name);
       return {
         ...resort,
-        website: `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`
+        homepage_url: match?.homepage_url || undefined
       };
-    }));
-
-    // Log results for debugging
-    validatedResorts.forEach(resort => {
-      console.log(`Resort: ${resort.name}`);
-      console.log(`Website: ${resort.website}`);
-      console.log(`Is fallback URL: ${resort.website.includes('google.com')}`);
     });
 
-    return validatedResorts;
-
   } catch (error) {
-    console.error('Error in validation process:', error);
-    return resorts;
+    console.error('Database validation error:', error);
+    return resorts; // Return original resorts if validation fails
   }
 };
 
@@ -1548,6 +1586,36 @@ const SKI_FACTS = [
   'The Alps generate 40% of Europe\'s fresh water from snowmelt',
   'Blue runs in Europe are equivalent to green runs in North America'
 ];
+
+// Update the constants to include both regions
+const REGIONS = {
+  EUROPE: 'Europe',
+  NORTH_AMERICA: 'North America'
+} as const
+
+const COUNTRIES_BY_REGION = {
+  [REGIONS.EUROPE]: [
+    'France',
+    'Austria',
+    'Switzerland',
+    'Italy',
+    'Germany',
+    'Norway',
+    'Sweden',
+    'Spain',
+    'Bulgaria',
+    'Slovenia',
+    'Czech Republic',
+    'Poland',
+    'Finland',
+    'Andorra',
+    'Greece'
+  ],
+  [REGIONS.NORTH_AMERICA]: [
+    'United States',
+    'Canada'
+  ]
+} as const
 
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
@@ -1655,35 +1723,25 @@ export default function ResultsPage() {
         if (cachedResorts) {
           setResorts(cachedResorts)
         } else {
-          // If no cached results or answers changed, make new API call
           const completion = await complete(constructPrompt(answers))
           
-          // Add robust JSON extraction
-          let cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
-          
-          // Find the first [ and last ] to extract just the JSON array
-          const startIndex = cleanedCompletion.indexOf('[')
-          const endIndex = cleanedCompletion.lastIndexOf(']')
-          
-          if (startIndex === -1 || endIndex === -1) {
-            throw new Error('Invalid response format from AI')
-          }
-          
-          cleanedCompletion = cleanedCompletion.substring(startIndex, endIndex + 1)
-          
           try {
-            const parsedResorts = JSON.parse(cleanedCompletion)
-            if (!Array.isArray(parsedResorts)) {
-              throw new Error('Response is not an array')
-            }
+            // Parse the response
+            let parsedResponse = JSON.parse(completion || '[]')
             
-            const validatedResorts = validateResorts(parsedResorts, answers.countries)
+            // Handle error response from AI
+            if (Array.isArray(parsedResponse) && parsedResponse.length === 1 && 'error' in parsedResponse[0]) {
+              throw new Error(parsedResponse[0].error)
+            }
+
+            // Validate resorts against selected countries
+            const validatedResorts = validateResorts(parsedResponse, answers.countries)
             
             // Validate against database
             const finalResorts = await validateAgainstDatabase(validatedResorts)
             
             if (finalResorts.length === 0) {
-              throw new Error('No valid resorts found')
+              throw new Error('No valid resorts found for your criteria. Please try adjusting your preferences.')
             }
             
             setResorts(finalResorts)
@@ -1694,7 +1752,7 @@ export default function ResultsPage() {
           } catch (parseError) {
             console.error('JSON Parse Error:', parseError)
             console.error('Raw Response:', completion)
-            throw new Error('Failed to parse resort data')
+            throw new Error(parseError instanceof Error ? parseError.message : 'Failed to parse resort data')
           }
         }
       } catch (error) {
