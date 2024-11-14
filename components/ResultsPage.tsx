@@ -88,6 +88,12 @@ interface Resort {
   }
   website?: string
   homepage_url?: string
+  tour_operators?: {
+    weski_url?: string;
+    crystal_ski_url?: string;
+    iglu_ski_url?: string;
+    ski_deal_url?: string;
+  };
 }
 
 // Function to determine pricing badge style based on price range
@@ -194,40 +200,92 @@ const LoadingCard = () => (
   </Card>
 )
 
-// Update the BookingCTA component
+// Update the TOUR_OPERATORS constant to match database column names
+const TOUR_OPERATORS = {
+  weski: {
+    name: 'We Ski',
+    favicon: 'https://www.weski.com/favicon-32x32.png',
+    style: 'from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
+  },
+  crystal_ski: {
+    name: 'Crystal Ski',
+    favicon: 'https://www.crystalski.co.uk/ski-holidays/_ui/mobile/th/images/crystal_uk/favicon.ico',
+    style: 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+  },
+  iglu_ski: {
+    name: 'Iglu Ski',
+    favicon: 'https://www.igluski.com/favicon.ico',
+    style: 'from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700'
+  },
+  skideal: {  // Changed from ski_deal to match database column name
+    name: 'Ski Deal',
+    favicon: 'https://www.skideal.co.il/app/uploads/2021/11/favicon-1-1-1.png?v=2',
+    style: 'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+  }
+} as const;
+
+// Update the BookingCTA component to handle the mapping
 const BookingCTA = ({ resort }: { resort: Resort }) => {
+  const operators = resort.tour_operators || {};
+  const availableOperators = Object.entries({
+    weski: operators.weski_url,
+    crystal_ski: operators.crystal_ski_url,
+    iglu_ski: operators.iglu_ski_url,
+    skideal: operators.ski_deal_url
+  })
+    .filter(([_, url]) => url)
+    .map(([key, url]) => ({
+      key: key as keyof typeof TOUR_OPERATORS,
+      url: url as string
+    }));
+
   return (
-    <div className="flex-shrink-0 w-full md:w-48 flex items-center justify-center p-4 md:px-4 border-t md:border-t-0 md:border-l border-gray-200">
-      <a
-        href={resort.homepage_url || resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => {
-          trackResortWebsiteClick(resort.name);
-        }}
-        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
-          text-white font-semibold 
-          rounded-full px-6 py-3 shadow-lg transform transition-all duration-300 
-          hover:shadow-xl hover:-translate-y-1 hover:scale-105
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-          active:translate-y-0 text-sm flex items-center justify-center gap-2"
-      >
-        <span>View Resort</span>
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          className="h-4 w-4"
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
+    <div className="flex-shrink-0 w-full md:w-48 flex flex-col items-stretch justify-center p-4 md:px-4 border-t md:border-t-0 md:border-l border-gray-200 space-y-2">
+      {availableOperators.length > 0 ? (
+        <>
+          {availableOperators.map(({ key, url }) => (
+            <TourOperatorCTA
+              key={key}
+              name={TOUR_OPERATORS[key].name}
+              url={url}
+              favicon={TOUR_OPERATORS[key].favicon}
+              style={TOUR_OPERATORS[key].style}
+            />
+          ))}
+        </>
+      ) : (
+        // Fallback to resort website if no tour operators
+        <a
+          href={resort.homepage_url || resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            trackResortWebsiteClick(resort.name);
+          }}
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
+            text-white font-semibold 
+            rounded-lg px-4 py-2.5 shadow-md transform transition-all duration-300 
+            hover:shadow-xl hover:-translate-y-1
+            focus:outline-none focus:ring-2 focus:ring-offset-2
+            active:translate-y-0 text-sm flex items-center justify-center gap-2"
         >
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-          <polyline points="15 3 21 3 21 9" />
-          <line x1="10" y1="14" x2="21" y2="3" />
-        </svg>
-      </a>
+          <span>View Resort</span>
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-4 w-4"
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </a>
+      )}
     </div>
   );
 };
@@ -395,7 +453,7 @@ const ResortCard = ({ resort, rank, onRemove }: { resort: Resort, rank: string, 
           </div>
         </div>
 
-        {/* CTA Section */}
+        {/* Replace the old CTA section with the new BookingCTA component */}
         <BookingCTA resort={resort} />
       </div>
     </Card>
@@ -1352,75 +1410,79 @@ const getResortUrl = async (resortName: string): Promise<string | null> => {
   }
 };
 
-// Update the validateAgainstDatabase function
+// Update the DBResort interface to match actual column names
+interface DBResort {
+  resort_name: string;
+  country: string;
+  homepage_url: string;
+  weski?: string;
+  crystal_ski?: string;
+  iglu_ski?: string;
+  skideal?: string;
+}
+
+// Update the validateAgainstDatabase function with correct column names
 const validateAgainstDatabase = async (resorts: Resort[]): Promise<Resort[]> => {
   console.log('Starting database validation for resorts:', resorts);
   
   if (!resorts.length) {
-    throw new Error('No resorts to validate');
+    console.warn('No resorts to validate');
+    return resorts;
   }
 
   try {
-    // Get the validation list from Supabase
+    console.log('Fetching validation list from Supabase...');
+    
     const { data: validationList, error } = await supabase
       .from('ski_resorts_validation_list')
-      .select('resort_name, homepage_url');
+      .select('resort_name, homepage_url, weski, crystal_ski, iglu_ski, skideal');
 
     if (error) {
-      console.error('Database validation error:', error);
-      return resorts; // Return original resorts if validation fails
+      console.error('Supabase error details:', error);
+      return resorts;
     }
 
-    console.log(`Found ${validationList?.length} resorts in validation list`);
+    if (!validationList) {
+      console.warn('No validation list returned from database');
+      return resorts;
+    }
 
-    // Function to find closest match in validation list
-    const findMatch = (resortName: string) => {
-      console.log('\nValidating resort:', resortName);
-      
-      // Try exact match first
-      const exactMatch = validationList?.find(v => 
-        v.resort_name.toLowerCase() === resortName.toLowerCase()
-      );
+    console.log(`Found ${validationList.length} resorts in validation list`);
 
-      if (exactMatch) {
-        console.log('Found exact match:', exactMatch);
-        return exactMatch;
-      }
-
-      // If no exact match, try fuzzy match
-      const fuse = new Fuse(validationList || [], {
-        keys: ['resort_name'],
-        threshold: 0.3
-      });
-
-      const fuzzyMatches = fuse.search(resortName);
-      if (fuzzyMatches.length > 0) {
-        console.log('Found fuzzy match:', fuzzyMatches[0].item);
-        return fuzzyMatches[0].item;
-      }
-
-      console.log('No match found for:', resortName);
-      return null;
-    };
-
-    // Validate each resort
     return resorts.map(resort => {
-      const match = findMatch(resort.name);
+      const match = validationList.find(v => 
+        v.resort_name.toLowerCase() === resort.name.toLowerCase()
+      );
       
-      // Log validation results
-      console.log('Resort:', resort.name);
-      console.log('Website:', match?.homepage_url || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`);
-      console.log('Is fallback URL:', !match?.homepage_url);
-
-      return {
+      if (!match) {
+        console.warn(`No match found for resort: ${resort.name}`);
+        return resort;
+      }
+      
+      console.log(`Found match for ${resort.name}:`, match);
+      
+      const updatedResort = {
         ...resort,
-        homepage_url: match?.homepage_url || undefined
+        homepage_url: match.homepage_url || undefined,
+        tour_operators: {
+          weski_url: match.weski,
+          crystal_ski_url: match.crystal_ski,
+          iglu_ski_url: match.iglu_ski,
+          ski_deal_url: match.skideal
+        }
       };
+      
+      console.log(`Updated resort data:`, updatedResort);
+      return updatedResort;
     });
 
   } catch (error) {
-    console.error('Database validation error:', error);
-    return resorts; // Return original resorts if validation fails
+    console.error('Detailed validation error:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    return resorts;
   }
 };
 
@@ -1549,6 +1611,10 @@ interface DBResort {
   resort_name: string;
   country: string;
   homepage_url: string;
+  weski?: string;
+  crystal_ski?: string;
+  iglu_ski?: string;
+  skideal?: string;
 }
 
 // Add type for the validation list filter function
@@ -1558,14 +1624,14 @@ interface ValidationListResort {
   homepage_url: string;
 }
 
-// Update the getValidResortsForCountries function with proper typing
+// Update the getValidResortsForCountries function with correct column names
 const getValidResortsForCountries = async (selectedCountries: string[]): Promise<DBResort[]> => {
   console.log('Phase 1 - Step 1: Getting valid resorts for countries:', selectedCountries);
   
   try {
     const { data, error } = await supabase
       .from('ski_resorts_validation_list')
-      .select('resort_name, country, homepage_url');
+      .select('resort_name, country, homepage_url, weski, crystal_ski, iglu_ski, skideal');
 
     if (error) throw error;
     const validationList = data as ValidationListResort[];
@@ -1631,7 +1697,7 @@ Remember: A partial match is better than no match. Focus on finding resorts that
   return modifiedPrompt;
 }
 
-// Function to process AI results and validate against DB resorts
+// Update the processAndValidateResults function with correct column names
 const processAndValidateResults = async (
   aiResults: Resort[], 
   validResorts: DBResort[]
@@ -1639,20 +1705,65 @@ const processAndValidateResults = async (
   console.log('Phase 2 - Step 3: Processing AI results');
   console.log('AI returned results:', aiResults);
 
-  // Map valid resorts for quick lookup
   const validResortsMap = new Map(validResorts.map(r => [r.resort_name.toLowerCase(), r]));
 
-  // Filter and enrich AI results
   const validatedResults = aiResults
     .filter(resort => validResortsMap.has(resort.name.toLowerCase()))
-    .map(resort => ({
-      ...resort,
-      homepage_url: validResortsMap.get(resort.name.toLowerCase())?.homepage_url
-    }));
+    .map(resort => {
+      const matchedResort = validResortsMap.get(resort.name.toLowerCase());
+      return {
+        ...resort,
+        homepage_url: matchedResort?.homepage_url,
+        tour_operators: {
+          weski_url: matchedResort?.weski,
+          crystal_ski_url: matchedResort?.crystal_ski,
+          iglu_ski_url: matchedResort?.iglu_ski,
+          ski_deal_url: matchedResort?.skideal
+        }
+      };
+    });
 
   console.log('Validated results:', validatedResults);
   return validatedResults;
 }
+
+// Add this after the existing imports
+const TourOperatorCTA = ({ 
+  name, 
+  url, 
+  favicon, 
+  style 
+}: { 
+  name: string; 
+  url: string; 
+  favicon: string; 
+  style: string;
+}) => (
+  <a
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
+    onClick={() => {
+      trackResortWebsiteClick(`${name} - ${url}`);
+    }}
+    className={`w-full bg-gradient-to-r ${style}
+      text-white font-semibold 
+      rounded-lg px-4 py-2.5 shadow-md transform transition-all duration-300 
+      hover:shadow-xl hover:-translate-y-1
+      focus:outline-none focus:ring-2 focus:ring-offset-2
+      active:translate-y-0 text-sm flex items-center justify-center gap-2`}
+  >
+    <img 
+      src={favicon} 
+      alt={`${name} logo`} 
+      className="w-4 h-4"
+      onError={(e) => {
+        e.currentTarget.style.display = 'none';
+      }}
+    />
+    <span>Book with {name}</span>
+  </a>
+);
 
 export default function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
@@ -1747,7 +1858,7 @@ export default function ResultsPage() {
     } finally {
       setIsLoading(false)
     }
-  } // Remove extra closing brace
+  }; // Add closing brace here
 
   useEffect(() => {
     const fetchResults = async () => {
