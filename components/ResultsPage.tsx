@@ -200,31 +200,31 @@ const LoadingCard = () => (
   </Card>
 )
 
-// Update the TOUR_OPERATORS constant to match database column names
+// Update the TOUR_OPERATORS constant with consistent color styling
 const TOUR_OPERATORS = {
   weski: {
-    name: 'We Ski',
+    name: 'WeSki',
     favicon: 'https://www.weski.com/favicon-32x32.png',
-    style: 'from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
+    style: 'from-[#285E61] to-[#234e51] hover:from-[#234e51] hover:to-[#1d4144] border border-[#285E61]/20'
   },
   crystal_ski: {
     name: 'Crystal Ski',
     favicon: 'https://www.crystalski.co.uk/ski-holidays/_ui/mobile/th/images/crystal_uk/favicon.ico',
-    style: 'from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+    style: 'from-[#285E61] to-[#234e51] hover:from-[#234e51] hover:to-[#1d4144] border border-[#285E61]/20'
   },
   iglu_ski: {
     name: 'Iglu Ski',
     favicon: 'https://www.igluski.com/favicon.ico',
-    style: 'from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700'
+    style: 'from-[#285E61] to-[#234e51] hover:from-[#234e51] hover:to-[#1d4144] border border-[#285E61]/20'
   },
-  skideal: {  // Changed from ski_deal to match database column name
-    name: 'Ski Deal',
+  skideal: {
+    name: 'SkiDeal',
     favicon: 'https://www.skideal.co.il/app/uploads/2021/11/favicon-1-1-1.png?v=2',
-    style: 'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+    style: 'from-[#285E61] to-[#234e51] hover:from-[#234e51] hover:to-[#1d4144] border border-[#285E61]/20'
   }
 } as const;
 
-// Update the BookingCTA component to handle the mapping
+// Update the BookingCTA component with wider width
 const BookingCTA = ({ resort }: { resort: Resort }) => {
   const operators = resort.tour_operators || {};
   const availableOperators = Object.entries({
@@ -240,52 +240,59 @@ const BookingCTA = ({ resort }: { resort: Resort }) => {
     }));
 
   return (
-    <div className="flex-shrink-0 w-full md:w-48 flex flex-col items-stretch justify-center p-4 md:px-4 border-t md:border-t-0 md:border-l border-gray-200 space-y-2">
-      {availableOperators.length > 0 ? (
-        <>
-          {availableOperators.map(({ key, url }) => (
-            <TourOperatorCTA
-              key={key}
-              name={TOUR_OPERATORS[key].name}
-              url={url}
-              favicon={TOUR_OPERATORS[key].favicon}
-              style={TOUR_OPERATORS[key].style}
-            />
-          ))}
-        </>
-      ) : (
-        // Fallback to resort website if no tour operators
-        <a
-          href={resort.homepage_url || resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => {
-            trackResortWebsiteClick(resort.name);
-          }}
-          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700
-            text-white font-semibold 
-            rounded-lg px-4 py-2.5 shadow-md transform transition-all duration-300 
-            hover:shadow-xl hover:-translate-y-1
-            focus:outline-none focus:ring-2 focus:ring-offset-2
-            active:translate-y-0 text-sm flex items-center justify-center gap-2"
-        >
-          <span>View Resort</span>
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="h-4 w-4"
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
+    <div className="flex-shrink-0 w-full md:w-52 flex flex-col items-stretch justify-center p-4 md:px-4 border-t md:border-t-0 md:border-l border-gray-200">
+      <h3 className="text-sm font-semibold text-gray-600 mb-3 text-center">
+        Book Your Trip
+      </h3>
+      <div className="space-y-2.5">
+        {availableOperators.length > 0 ? (
+          <>
+            {availableOperators.map(({ key, url }) => (
+              <TourOperatorCTA
+                key={key}
+                name={TOUR_OPERATORS[key].name}
+                url={url}
+                favicon={TOUR_OPERATORS[key].favicon}
+                style={TOUR_OPERATORS[key].style}
+              />
+            ))}
+          </>
+        ) : (
+          // Fallback button with matching dimensions
+          <a
+            href={resort.homepage_url || resort.website || `https://www.google.com/search?q=${encodeURIComponent(resort.name + ' ski resort')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              trackResortWebsiteClick(resort.name);
+            }}
+            className="w-full bg-gradient-to-r from-[#285E61] to-[#234e51] hover:from-[#234e51] hover:to-[#1d4144]
+              text-white font-medium border border-[#285E61]/20
+              h-10 rounded-lg shadow-md 
+              transform transition-all duration-300 
+              hover:shadow-lg hover:-translate-y-0.5 hover:scale-[1.02]
+              focus:outline-none focus:ring-2 focus:ring-offset-2
+              active:translate-y-0 active:scale-[0.98]
+              text-sm flex items-center justify-center gap-2"
           >
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-        </a>
-      )}
+            <span>View Resort</span>
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-4 w-4"
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
+        )}
+      </div>
     </div>
   );
 };
@@ -1727,7 +1734,7 @@ const processAndValidateResults = async (
   return validatedResults;
 }
 
-// Add this after the existing imports
+// Update the TourOperatorCTA component with bigger logos
 const TourOperatorCTA = ({ 
   name, 
   url, 
@@ -1747,21 +1754,27 @@ const TourOperatorCTA = ({
       trackResortWebsiteClick(`${name} - ${url}`);
     }}
     className={`w-full bg-gradient-to-r ${style}
-      text-white font-semibold 
-      rounded-lg px-4 py-2.5 shadow-md transform transition-all duration-300 
-      hover:shadow-xl hover:-translate-y-1
+      text-white font-medium
+      h-10 rounded-lg shadow-md 
+      transform transition-all duration-300 
+      hover:shadow-lg hover:-translate-y-0.5 hover:scale-[1.02]
       focus:outline-none focus:ring-2 focus:ring-offset-2
-      active:translate-y-0 text-sm flex items-center justify-center gap-2`}
+      active:translate-y-0 active:scale-[0.98]
+      text-sm flex items-center`}
   >
-    <img 
-      src={favicon} 
-      alt={`${name} logo`} 
-      className="w-4 h-4"
-      onError={(e) => {
-        e.currentTarget.style.display = 'none';
-      }}
-    />
-    <span>Book with {name}</span>
+    <div className="flex items-center justify-center w-full px-4 gap-2">
+      <div className="w-6 h-6 flex-shrink-0 bg-white rounded-full p-1 flex items-center justify-center">
+        <img 
+          src={favicon} 
+          alt={`${name} logo`} 
+          className="w-4 h-4 object-contain"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      </div>
+      <span className="flex-1 text-center">{name}</span>
+    </div>
   </a>
 );
 
