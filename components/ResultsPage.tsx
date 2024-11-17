@@ -632,25 +632,24 @@ const validateResorts = (resorts: Resort[], selectedCountries: string[]): Resort
   return validResorts.slice(0, 3)
 }
 
-// API prompt construction
-const constructPrompt = (answers: StorageState['answers']): string => {
-  // Define budget-friendly countries in order of affordability
-  const budgetFriendlyCountries = [
-    'Bulgaria', 'Serbia', 'Poland', 'Romania', 'Bosnia and Herzegovina',
-    'Slovakia', 'Czech Republic', 'Montenegro', 'Slovenia', 'Andorra'
-  ];
+// Add these helper functions near the top with other utility functions
+const getPricingGuidance = (pricingSensitivity: string): string => {
+  switch (pricingSensitivity) {
+    case 'Budget-friendly':
+      return `CRITICAL BUDGET REQUIREMENT: User specifically requested budget-friendly options.
+       STRICT REQUIREMENTS:
+       - Focus on resorts known for affordability
+       - Prioritize areas with lower lift pass prices
+       - Look for resorts with good value accommodation
+       - Consider destinations with reasonable equipment rental costs
+       
+       PRICING EXPECTATIONS:
+       - Daily lift passes should be under €50
+       - Look for resorts with budget-friendly dining options
+       - Prioritize areas with affordable ski schools if lessons needed`;
 
-  // Define luxury resort destinations
-  const luxuryDestinations = [
-    'Courchevel', 'Zermatt', 'St. Moritz', 'Verbier', 'Gstaad',
-    'Lech-Zürs', 'Kitzbühel', 'Megève', 'Val d\'Isère', 'Cortina d\'Ampezzo'
-  ];
-
-  const isLuxuryFocused = answers.pricingSensitivity === 'Looking specifically for luxury destinations';
-  const isBudgetFriendly = answers.pricingSensitivity === 'Very important - I\'d prefer destinations known for lower overall costs';
-
-  const pricingGuidance = isLuxuryFocused
-    ? `CRITICAL LUXURY REQUIREMENT: User specifically requested luxury destinations.
+    case 'Luxury':
+      return `CRITICAL LUXURY REQUIREMENT: User specifically requested luxury destinations.
        STRICT REQUIREMENTS:
        - Focus ONLY on world-renowned luxury ski resorts
        - Prioritize resorts known for:
@@ -663,42 +662,87 @@ const constructPrompt = (answers: StorageState['answers']): string => {
          * Exceptional service standards
        
        PRICING EXPECTATIONS:
-       - Daily lift passes should be in the premium range (€80+)
+       - Daily lift passes can be premium range (€80+)
        - Focus on resorts with luxury accommodation options
-       - Include resorts known for their wealthy clientele
+       - Include resorts known for their wealthy clientele`;
+
+    case 'Mid-range':
+      return `PRICING GUIDANCE: User prefers mid-range options.
+       REQUIREMENTS:
+       - Focus on resorts offering good value for money
+       - Balance quality and cost
+       - Look for resorts with:
+         * Reasonable lift pass prices (€50-80 per day)
+         * Mix of accommodation options
+         * Good quality facilities without premium pricing
+         * Varied dining options at different price points`;
+
+    default:
+      return `STANDARD PRICING GUIDANCE: Focus on resorts that provide good value while meeting the user's quality expectations.
+       Consider:
+       - Mid-range lift pass prices
+       - Mix of accommodation options
+       - Reasonable equipment rental costs
+       - Balanced food and drink prices
+       - Good quality-to-price ratio for facilities`;
+  }
+};
+
+// Update the constructPrompt function
+const constructPrompt = (answers: StorageState['answers']): string => {
+  // Check if this is a direct resort selection
+  const isDirectSelection = answers.additionalInfo?.startsWith('Show me information about ');
+  
+  if (isDirectSelection) {
+    const resortName = answers.additionalInfo.replace('Show me information about ', '');
+    return `Please provide detailed information about ${resortName} ski resort in ${answers.countries[0]}.
+    
+    CRITICAL REQUIREMENTS:
+    1. You MUST ONLY return information about ${resortName}
+    2. Return exactly ONE resort in the response
+    3. Include complete details about:
+       - Difficulty levels
+       - Available runs
+       - Ski area
+       - Lift system
+       - Village details
+       - Nightlife
+       - Key highlights
        
-       SUGGESTED LUXURY DESTINATIONS (if matching selected countries):
-       ${luxuryDestinations.join(', ')}`
-    : isBudgetFriendly
-      ? `CRITICAL BUDGET CONSIDERATION: User specifically requested budget-friendly options.
-         YOU MUST PRIORITIZE resorts from these specific countries in this exact order:
-         1. Bulgaria (most affordable)
-         2. Serbia
-         3. Poland
-         4. Romania
-         5. Bosnia and Herzegovina
-         6. Slovakia
-         7. Czech Republic
-         8. Montenegro
-         9. Slovenia
-         10. Andorra
-         
-         STRICT REQUIREMENTS:
-         - Your first recommendation MUST be from Bulgaria, Serbia, or Poland
-         - Your second recommendation MUST be from one of the other listed countries
-         - Your third recommendation can be from any of these countries`
-      : `STANDARD PRICING GUIDANCE: Focus on resorts that provide good value while meeting the user's quality expectations.
-         Consider:
-         - Mid-range lift pass prices
-         - Mix of accommodation options
-         - Reasonable equipment rental costs
-         - Balanced food and drink prices
-         - Good quality-to-price ratio for facilities`
+    RESPONSE FORMAT:
+    Provide the resort information in the exact JSON format as specified:
+    {
+      "name": "${resortName}",
+      "location": string,
+      "country": "${answers.countries[0]}",
+      "difficulty": {
+        "easy": number (percentage),
+        "intermediate": number (percentage),
+        "advanced": number (percentage)
+      },
+      "runs": {
+        "easy": number (count),
+        "intermediate": number (count),
+        "advanced": number (count)
+      },
+      "skiArea": string,
+      "numberOfLifts": number,
+      "villageAltitude": string,
+      "skiRange": string,
+      "nightlife": "Vibrant" | "Moderate" | "Quiet",
+      "highlights": string[],
+      "explanation": string,
+      "pricing": {
+        "dailyPass": string,
+        "sixDayPass": string
+      }
+    }`;
+  }
 
-  const locationRequirement = answers.countries?.includes("Anywhere in Europe") || answers.countries?.includes("Anywhere in North America")
-    ? `User is open to resorts in ${answers.countries.join(', ')}. ONLY suggest resorts from these regions.`
-    : `YOU MUST ONLY SUGGEST RESORTS FROM: ${answers.countries?.join(', ')}. This is a non-negotiable requirement.`;
+  const pricingGuidance = getPricingGuidance(answers.pricingSensitivity);
+  const isBudgetFriendly = answers.pricingSensitivity === 'Budget-friendly';
 
+  // If not a direct selection, use the existing prompt construction
   return `Based on the following user preferences from the questionnaire:
 
 Experience Level: ${answers.skiingLevels?.join(', ')}
@@ -711,7 +755,9 @@ Off-Piste Interest: ${answers.offPiste}
 Ski-in/Ski-out Preference: ${answers.skiInSkiOut}
 
 CRITICAL REQUIREMENTS:
-1. LOCATION REQUIREMENT: ${locationRequirement}
+1. LOCATION REQUIREMENT: ${answers.countries?.includes("Anywhere in Europe") || answers.countries?.includes("Anywhere in North America") 
+     ? `User is open to resorts in ${answers.countries.join(', ')}. ONLY suggest resorts from these regions.`
+     : `YOU MUST ONLY SUGGEST RESORTS FROM: ${answers.countries?.join(', ')}. This is a non-negotiable requirement.`}
 
 2. ${pricingGuidance}
 
@@ -776,10 +822,8 @@ IMPORTANT: ALL fields listed above are required. Do not omit any fields.
 Each resort must include complete information for altitude, ski range, and pricing.
 Format all prices in euros (€).
 
-Please provide exactly three resort recommendations in valid JSON format.
-${pricingGuidance}
-... (rest of your existing prompt) ...`
-}
+Please provide exactly three resort recommendations in valid JSON format.`;
+};
 
 // Add this function to determine price tag
 const getPriceTag = (price: string | undefined): string => {
@@ -1885,14 +1929,17 @@ export default function ResultsPage() {
         }
 
         const { answers } = JSON.parse(savedData) as StorageState;
+        const isDirectSelection = answers.additionalInfo?.startsWith('Show me information about ');
 
-        // Try cached results first
-        const cachedResults = await getResortsFromStorage(answers);
-        if (cachedResults) {
-          console.log('Using cached results:', cachedResults);
-          setResorts(cachedResults);
-          setIsLoading(false);
-          return;
+        // For direct selection, skip cache check
+        if (!isDirectSelection) {
+          const cachedResults = await getResortsFromStorage(answers);
+          if (cachedResults) {
+            console.log('Using cached results:', cachedResults);
+            setResorts(cachedResults);
+            setIsLoading(false);
+            return;
+          }
         }
 
         // Start parallel processing
@@ -1918,18 +1965,23 @@ export default function ResultsPage() {
         const cleanedCompletion = completion.replace(/```json\n?|\n?```/g, '').trim();
         const parsedResorts = JSON.parse(cleanedCompletion);
 
-        // Process results and save to database in parallel
-        const [finalResorts] = await Promise.all([
-          processAndValidateResults(parsedResorts, validResorts),
-          saveToDatabase(answers, parsedResorts)
-        ]);
+        // For direct selection, ensure we only get one resort
+        const resortsToProcess = isDirectSelection ? [parsedResorts] : parsedResorts;
+
+        // First validate the resorts
+        const finalResorts = await processAndValidateResults(resortsToProcess, validResorts);
 
         if (finalResorts.length === 0) {
           throw new Error('No valid resorts found matching your criteria');
         }
 
+        // Then save to database
+        await saveToDatabase(answers, finalResorts);
+
         setResorts(finalResorts);
-        saveResortsToStorage(finalResorts);
+        if (!isDirectSelection) {
+          saveResortsToStorage(finalResorts);
+        }
 
       } catch (error) {
         console.error('Fetch Results Error:', error);

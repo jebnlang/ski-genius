@@ -277,7 +277,41 @@ export default function Component() {
                       {resorts.map((resort) => (
                         <li 
                           key={resort} 
-                          className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
+                          onClick={() => {
+                            // Create default answers with only the selected resort
+                            const defaultAnswers = {
+                              groupType: '',
+                              childrenAges: [],
+                              sportType: '',
+                              countries: [country], // Set the country of the selected resort
+                              skiingLevels: [],
+                              snowPark: '',
+                              offPiste: '',
+                              pricingSensitivity: 'Flexible',
+                              lessons: '',
+                              nightlife: '',
+                              skiInSkiOut: '',
+                              resortPreferences: [],
+                              otherActivities: [],
+                              travelTime: '',
+                              travelMonth: [],
+                              additionalInfo: `Show me information about ${resort}` // Set the resort name
+                            };
+
+                            // Save to localStorage
+                            localStorage.setItem('ski_questionnaire_data', JSON.stringify({
+                              answers: defaultAnswers,
+                              lastUpdated: new Date().toISOString(),
+                              currentStep: 12
+                            }));
+
+                            // Clear previous results
+                            localStorage.removeItem('ski_resort_results');
+
+                            // Navigate to results page
+                            router.push('/results');
+                          }}
+                          className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer hover:bg-blue-50 p-2 rounded-md"
                         >
                           {resort}
                         </li>
