@@ -1838,8 +1838,6 @@ export default function ResultsPage() {
   const [currentFact, setCurrentFact] = useState(SKI_FACTS[Math.floor(Math.random() * SKI_FACTS.length)])
   const [validationListCache, setValidationListCache] = useState<DBResort[] | null>(null);
   const [resultsSaved, setResultsSaved] = useState(false);
-  // Add this state to track if we have final results
-  const [hasFinalResults, setHasFinalResults] = useState(false);
   
   const router = useRouter()
   const { complete } = useCompletion({
@@ -1903,7 +1901,6 @@ export default function ResultsPage() {
       setIsLoading(true)
       setError(null)
       setResultsSaved(false) // Reset the flag when updating preferences
-      setHasFinalResults(false) // Reset final results flag
 
       const storageData: StorageState = {
         answers: newAnswers,
@@ -1912,24 +1909,16 @@ export default function ResultsPage() {
       }
       localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
 
-      // Get all data before showing results
-      const [validResorts, completion] = await Promise.all([
-        getValidResortsForCountries(newAnswers.countries),
-        complete(constructPrompt(newAnswers))
-      ]);
-
+      const completion = await complete(constructPrompt(newAnswers))
       const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
       const parsedResorts = JSON.parse(cleanedCompletion)
-      const validatedResorts = await processAndValidateResults(parsedResorts, validResorts)
+      const validatedResorts = validateResorts(parsedResorts, newAnswers.countries)
 
-      // Save to database
-      await saveToDatabase(newAnswers, validatedResorts)
-      
-      // Update everything at once
       setResorts(validatedResorts)
       saveResortsToStorage(validatedResorts)
-      setResultsSaved(true)
-      setHasFinalResults(true)
+      
+      await saveToDatabase(newAnswers, validatedResorts)
+      setResultsSaved(true) // Set flag after saving
 
     } catch (error) {
       setError('Failed to update results. Please try again.')
@@ -1941,8 +1930,6 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        if (hasFinalResults) return; // Skip if we already have final results
-        
         setIsLoading(true);
         setError(null);
 
@@ -1954,19 +1941,18 @@ export default function ResultsPage() {
         const { answers } = JSON.parse(savedData) as StorageState;
         const isDirectSelection = answers.additionalInfo?.startsWith('Show me information about ');
 
-        // Check cache first
+        // For direct selection, skip cache check
         if (!isDirectSelection) {
           const cachedResults = await getResortsFromStorage(answers);
           if (cachedResults) {
             console.log('Using cached results:', cachedResults);
             setResorts(cachedResults);
-            setHasFinalResults(true);
             setIsLoading(false);
             return;
           }
         }
 
-        // Get all necessary data before showing any results
+        // Start parallel processing
         const [validResorts, basePrompt] = await Promise.all([
           getValidResortsForCountries(answers.countries),
           Promise.resolve(constructPrompt(answers))
@@ -1976,34 +1962,36 @@ export default function ResultsPage() {
           throw new Error('No resorts found in selected countries. Please try different countries.');
         }
 
+        // Modify prompt with valid resorts
         const modifiedPrompt = modifyPromptWithValidResorts(basePrompt, validResorts);
-        const completion = await complete(modifiedPrompt);
         
+        // Make AI API call
+        const completion = await complete(modifiedPrompt);
         if (!completion) {
           throw new Error('No response from recommendation service');
         }
 
+        // Parse and validate results
         const cleanedCompletion = completion.replace(/```json\n?|\n?```/g, '').trim();
         const parsedResorts = JSON.parse(cleanedCompletion);
+
+        // For direct selection, ensure we only get one resort
         const resortsToProcess = isDirectSelection ? [parsedResorts] : parsedResorts;
-        
-        // Process and validate before showing anything
+
+        // First validate the resorts
         const finalResorts = await processAndValidateResults(resortsToProcess, validResorts);
 
         if (finalResorts.length === 0) {
           throw new Error('No valid resorts found matching your criteria');
         }
 
-        // Save to database only once we have final results
+        // Only save to database if we haven't saved these results yet
         if (!resultsSaved) {
           await saveToDatabase(answers, finalResorts);
           setResultsSaved(true);
         }
 
-        // Set everything at once
         setResorts(finalResorts);
-        setHasFinalResults(true);
-        
         if (!isDirectSelection) {
           saveResortsToStorage(finalResorts);
         }
@@ -2017,7 +2005,7 @@ export default function ResultsPage() {
     };
 
     fetchResults();
-  }, [complete]); // Remove resultsSaved from dependencies
+  }, [complete, resultsSaved]); // Add resultsSaved to dependencies
 
   // Add tracking when resorts are viewed
   useEffect(() => {
@@ -2188,7 +2176,7 @@ export default function ResultsPage() {
 
             {/* Results Cards */}
             <div className="space-y-4">
-              {hasFinalResults && resorts.map((resort, index) => (
+              {resorts.map((resort, index) => (
                 <div key={index} className="transition-all duration-300">
                   {loadingCards[index] ? (
                     <LoadingCard />

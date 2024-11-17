@@ -30,6 +30,8 @@ interface RecentResort {
   highlights: string[]
   explanation: string | null
   created_at: string
+  daily_pass_price: number
+  six_day_pass_price: number
 }
 
 interface AvailableResort {
@@ -64,7 +66,9 @@ export default function Component() {
             nightlife,
             highlights,
             explanation,
-            created_at
+            created_at,
+            daily_pass_price,
+            six_day_pass_price
           `)
           .order('created_at', { ascending: false })
           .limit(6)
@@ -299,40 +303,17 @@ export default function Component() {
                       </div>
                     </div>
 
-                    {/* Bottom section with proportional difficulty indicators */}
+                    {/* Bottom section with ski pass pricing */}
                     <div className="mt-6 pt-4 border-t border-gray-100">
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1 mr-4">
-                          <div className="flex h-2 rounded-full overflow-hidden">
-                            <div 
-                              className="bg-green-400" 
-                              style={{ 
-                                width: `${(resort.runs.easy / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` 
-                              }} 
-                              title={`${resort.runs.easy} easy runs`}
-                            />
-                            <div 
-                              className="bg-blue-400" 
-                              style={{ 
-                                width: `${(resort.runs.intermediate / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` 
-                              }} 
-                              title={`${resort.runs.intermediate} intermediate runs`}
-                            />
-                            <div 
-                              className="bg-black" 
-                              style={{ 
-                                width: `${(resort.runs.advanced / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` 
-                              }} 
-                              title={`${resort.runs.advanced} advanced runs`}
-                            />
-                          </div>
-                          <div className="flex justify-between mt-1 text-xs text-gray-500">
-                            <span>{resort.runs.easy}</span>
-                            <span>{resort.runs.intermediate}</span>
-                            <span>{resort.runs.advanced}</span>
-                          </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Daily Pass:</span>
+                          <span className="font-semibold">€{resort.daily_pass_price}</span>
                         </div>
-                        <ArrowRight className="w-5 h-5 text-blue-500" />
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">6-Day Pass:</span>
+                          <span className="font-semibold">€{resort.six_day_pass_price}</span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
