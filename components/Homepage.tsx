@@ -43,6 +43,7 @@ export default function Component() {
   const [isLoading, setIsLoading] = useState(true)
   const [availableResorts, setAvailableResorts] = useState<AvailableResort[]>([])
   const [isLoadingResorts, setIsLoadingResorts] = useState(true)
+  const [expandedCountries, setExpandedCountries] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const fetchRecentRecommendations = async () => {
@@ -123,6 +124,13 @@ export default function Component() {
       acc[resort.country].push(resort.resort_name)
       return acc
     }, {} as Record<string, string[]>)
+  }
+
+  const toggleCountryExpansion = (country: string) => {
+    setExpandedCountries(prev => ({
+      ...prev,
+      [country]: !prev[country]
+    }))
   }
 
   return (
@@ -300,60 +308,70 @@ export default function Component() {
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Object.entries(groupResortsByCountry(availableResorts)).map(([country, resorts]) => (
-                <Card key={country} className="bg-white bg-opacity-40 backdrop-blur-md">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold mb-4 text-blue-600 border-b border-blue-200 pb-2">
-                      {country}
-                    </h3>
-                    <ul className="space-y-2">
-                      {resorts.map((resort) => (
-                        <li 
-                          key={resort} 
-                          onClick={() => {
-                            // Create default answers with only the selected resort
-                            const defaultAnswers = {
-                              groupType: '',
-                              childrenAges: [],
-                              sportType: '',
-                              countries: [country], // Set the country of the selected resort
-                              skiingLevels: [],
-                              snowPark: '',
-                              offPiste: '',
-                              pricingSensitivity: 'Flexible',
-                              lessons: '',
-                              nightlife: '',
-                              skiInSkiOut: '',
-                              resortPreferences: [],
-                              otherActivities: [],
-                              travelTime: '',
-                              travelMonth: [],
-                              additionalInfo: `Show me information about ${resort}` // Set the resort name
-                            };
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {Object.entries(groupResortsByCountry(availableResorts)).map(([country, resorts]) => {
+                const isExpanded = expandedCountries[country] || false;
+                const visibleResorts = isExpanded ? resorts : resorts.slice(0, 3);
+                const remainingCount = resorts.length - 3;
 
-                            // Save to localStorage
-                            localStorage.setItem('ski_questionnaire_data', JSON.stringify({
-                              answers: defaultAnswers,
-                              lastUpdated: new Date().toISOString(),
-                              currentStep: 12
-                            }));
+                return (
+                  <Card key={country} className="bg-white bg-opacity-40 backdrop-blur-md border-gray-200">
+                    <CardContent className="p-4">
+                      <h3 className="text-sm font-bold mb-2 text-blue-600 border-b border-blue-100 pb-1">
+                        {country}
+                      </h3>
+                      <ul className="space-y-1">
+                        {visibleResorts.map((resort) => (
+                          <li 
+                            key={resort}
+                            onClick={() => {
+                              // Preserve existing click handler logic
+                              const defaultAnswers = {
+                                groupType: '',
+                                childrenAges: [],
+                                sportType: '',
+                                countries: [country],
+                                skiingLevels: [],
+                                snowPark: '',
+                                offPiste: '',
+                                pricingSensitivity: 'Flexible',
+                                lessons: '',
+                                nightlife: '',
+                                skiInSkiOut: '',
+                                resortPreferences: [],
+                                otherActivities: [],
+                                travelTime: '',
+                                travelMonth: [],
+                                additionalInfo: `Show me information about ${resort}`
+                              };
 
-                            // Clear previous results
-                            localStorage.removeItem('ski_resort_results');
+                              localStorage.setItem('ski_questionnaire_data', JSON.stringify({
+                                answers: defaultAnswers,
+                                lastUpdated: new Date().toISOString(),
+                                currentStep: 12
+                              }));
 
-                            // Navigate to results page
-                            router.push('/results');
-                          }}
-                          className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer hover:bg-blue-50 p-2 rounded-md"
+                              localStorage.removeItem('ski_resort_results');
+                              router.push('/results');
+                            }}
+                            className="text-sm text-gray-700 hover:text-blue-600 transition-colors cursor-pointer hover:bg-blue-50 px-2 py-1 rounded-md"
+                          >
+                            {resort}
+                          </li>
+                        ))}
+                      </ul>
+                      {resorts.length > 3 && (
+                        <button
+                          onClick={() => toggleCountryExpansion(country)}
+                          className="text-xs text-gray-500 hover:text-blue-600 mt-2 cursor-pointer"
                         >
-                          {resort}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ))}
+                          {isExpanded ? 'Show less' : `Show ${remainingCount} more`}
+                        </button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
