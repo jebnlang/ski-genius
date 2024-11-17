@@ -1815,11 +1815,14 @@ const TourOperatorCTA = ({
   >
     <div className="flex items-center justify-center w-full px-4 gap-2">
       <div className="w-6 h-6 flex-shrink-0 bg-white rounded-full p-1 flex items-center justify-center">
-        <img 
+        <Image 
           src={favicon} 
           alt={`${name} logo`} 
-          className="w-4 h-4 object-contain"
+          width={16}
+          height={16}
+          className="object-contain"
           onError={(e) => {
+            // Hide the image if it fails to load
             e.currentTarget.style.display = 'none';
           }}
         />

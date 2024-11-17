@@ -39,6 +39,23 @@ interface AvailableResort {
   country: string
 }
 
+const SKI_FACTS = [
+  'The word ski comes from the Old Norse word skíð meaning stick of wood',
+  'The first ski lift was invented in 1908 by Robert Winterhalder in Germany',
+  'Skiing was originally a mode of transport, used by ancient Nordic hunters',
+  'The first Winter Olympics featuring skiing was held in 1924 in Chamonix, France',
+  'Val Thorens is Europe&apos;s highest ski resort at 2,300m altitude',
+  'Zermatt, Switzerland offers skiing 365 days a year on its glacier',
+  'The longest ski run in Europe is 22km long, located in Alpe d&apos;Huez',
+  'Courchevel was the first resort purpose-built for skiing in France',
+  'St. Moritz hosted the Winter Olympics twice: in 1928 and 1948',
+  'No two snowflakes are exactly alike due to their unique crystal formation',
+  'Fresh powder snow is 97% air, making it perfect for skiing',
+  'Snow appears white because of how light reflects off ice crystals',
+  'The Alps generate 40% of Europe&apos;s fresh water from snowmelt',
+  'Blue runs in Europe are equivalent to green runs in North America'
+];
+
 export default function Component() {
   const router = useRouter()
   const [recentRecommendations, setRecentRecommendations] = useState<RecentResort[]>([])
