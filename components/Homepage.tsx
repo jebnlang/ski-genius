@@ -32,10 +32,17 @@ interface RecentResort {
   created_at: string
 }
 
+interface AvailableResort {
+  resort_name: string
+  country: string
+}
+
 export default function Component() {
   const router = useRouter()
   const [recentRecommendations, setRecentRecommendations] = useState<RecentResort[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [availableResorts, setAvailableResorts] = useState<AvailableResort[]>([])
+  const [isLoadingResorts, setIsLoadingResorts] = useState(true)
 
   useEffect(() => {
     const fetchRecentRecommendations = async () => {
@@ -78,10 +85,44 @@ export default function Component() {
     fetchRecentRecommendations()
   }, [])
 
+  useEffect(() => {
+    const fetchAvailableResorts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('ski_resorts_validation_list')
+          .select('resort_name, country')
+          .order('country')
+
+        if (error) {
+          console.error('Error fetching resorts:', error)
+          return
+        }
+
+        setAvailableResorts(data || [])
+      } catch (error) {
+        console.error('Caught error:', error)
+      } finally {
+        setIsLoadingResorts(false)
+      }
+    }
+
+    fetchAvailableResorts()
+  }, [])
+
   const handleStartNewSearch = () => {
     localStorage.removeItem('ski_questionnaire_data')
     localStorage.removeItem('ski_resort_results')
     router.push('/questionnaire')
+  }
+
+  const groupResortsByCountry = (resorts: AvailableResort[]) => {
+    return resorts.reduce((acc, resort) => {
+      if (!acc[resort.country]) {
+        acc[resort.country] = []
+      }
+      acc[resort.country].push(resort.resort_name)
+      return acc
+    }, {} as Record<string, string[]>)
   }
 
   return (
@@ -208,6 +249,43 @@ export default function Component() {
           ) : (
             <div className="text-center text-gray-600">
               <p>No recommendations available yet.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Available Resorts Section */}
+      <section className="py-24 px-4 bg-white bg-opacity-40 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">
+            Explore Our Resort Collection
+          </h2>
+          
+          {isLoadingResorts ? (
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {Object.entries(groupResortsByCountry(availableResorts)).map(([country, resorts]) => (
+                <Card key={country} className="bg-white bg-opacity-40 backdrop-blur-md">
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-bold mb-4 text-blue-600 border-b border-blue-200 pb-2">
+                      {country}
+                    </h3>
+                    <ul className="space-y-2">
+                      {resorts.map((resort) => (
+                        <li 
+                          key={resort} 
+                          className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer"
+                        >
+                          {resort}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>
