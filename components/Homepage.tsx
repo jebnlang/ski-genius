@@ -208,7 +208,41 @@ export default function Component() {
               {recentRecommendations.map((resort) => (
                 <Card 
                   key={resort.id} 
-                  className="overflow-hidden transition-transform duration-300 hover:scale-105 bg-white bg-opacity-40 backdrop-blur-md border border-white"
+                  className="overflow-hidden transition-transform duration-300 hover:scale-105 bg-white bg-opacity-40 backdrop-blur-md border border-white cursor-pointer"
+                  onClick={() => {
+                    // Create default answers with only the selected resort
+                    const defaultAnswers = {
+                      groupType: '',
+                      childrenAges: [],
+                      sportType: '',
+                      countries: [resort.country], // Set the country of the selected resort
+                      skiingLevels: [],
+                      snowPark: '',
+                      offPiste: '',
+                      pricingSensitivity: 'Flexible',
+                      lessons: '',
+                      nightlife: '',
+                      skiInSkiOut: '',
+                      resortPreferences: [],
+                      otherActivities: [],
+                      travelTime: '',
+                      travelMonth: [],
+                      additionalInfo: `Show me information about ${resort.name}` // Set the resort name
+                    };
+
+                    // Save to localStorage
+                    localStorage.setItem('ski_questionnaire_data', JSON.stringify({
+                      answers: defaultAnswers,
+                      lastUpdated: new Date().toISOString(),
+                      currentStep: 12
+                    }));
+
+                    // Clear previous results
+                    localStorage.removeItem('ski_resort_results');
+
+                    // Navigate to results page
+                    router.push('/results');
+                  }}
                 >
                   <CardContent className="p-0">
                     <div className="p-6">
