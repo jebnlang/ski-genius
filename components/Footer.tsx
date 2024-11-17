@@ -2,7 +2,7 @@ import { Heart } from 'lucide-react'
 
 const Footer = () => {
   return (
-    <footer className="w-full py-6 mt-auto">
+    <footer className="w-full py-6 bg-white/80 backdrop-blur-sm border-t border-gray-200">
       <div className="container mx-auto px-4">
         <div className="flex justify-center items-center text-sm text-gray-600">
           Made with <Heart className="h-4 w-4 mx-1 text-red-500 fill-current" /> by{' '}

@@ -41,7 +41,7 @@ const Navbar = () => {
                 width={500}
                 height={160}
                 style={{ 
-                  width: '400px',
+                  width: '221px',
                   height: 'auto',
                 }}
                 priority

@@ -189,17 +189,6 @@ export default function Component() {
               <p>No recommendations available yet.</p>
             </div>
           )}
-
-          <div className="text-center mt-12">
-            <button 
-              onClick={() => handleStartNewSearch()}
-              className="text-xl px-10 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:from-blue-500 hover:to-blue-700 cursor-pointer"
-            >
-              <span className="flex items-center">
-                Start Your Search <ArrowRight className="ml-2 h-6 w-6" />
-              </span>
-            </button>
-          </div>
         </div>
       </section>
     </div>
