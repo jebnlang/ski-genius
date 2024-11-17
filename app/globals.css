@@ -186,3 +186,12 @@ html {
   border-radius: 50%;
   filter: blur(8px);
 }
+
+/* Add to your existing styles */
+.transition-opacity {
+  opacity: 1;
+}
+
+.transition-opacity.opacity-0 {
+  opacity: 0;
+}

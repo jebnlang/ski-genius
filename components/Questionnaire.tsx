@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -286,16 +286,32 @@ export default function Component() {
   const pathname = usePathname()
   const router = useRouter()
   const [answers, updateAnswers] = useQuestionnaireState()
-  
+  const totalSteps = 12
+
   // Update step management to work with URLs
   const [step, setStep] = useState(() => {
     const route = pathname?.split('/').pop()
     return route ? routeToStep[route] || 1 : 1
   })
 
-  // Add this helper function to avoid code duplication
+  // Preload the next route
+  const preloadNextRoute = useCallback((nextStep: number) => {
+    const nextRoute = questionRoutes[nextStep as keyof typeof questionRoutes]
+    if (nextRoute) {
+      router.prefetch(`/questionnaire/${nextRoute}`)
+    }
+  }, [router])
+
+  // Update useEffect to preload the next route when component mounts
+  useEffect(() => {
+    if (step < totalSteps) {
+      preloadNextRoute(step + 1)
+    }
+  }, [step, totalSteps, preloadNextRoute])
+
+  // Update navigateToStep function to use correct router.push syntax
   const navigateToStep = (newStep: number) => {
-    // Update local state
+    // Update local state first
     setStep(newStep)
     
     // Save to localStorage
@@ -306,7 +322,7 @@ export default function Component() {
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData))
     
-    // Navigate
+    // Navigate with shallow routing to prevent full page refresh
     const route = questionRoutes[newStep as keyof typeof questionRoutes]
     if (route) {
       router.push(`/questionnaire/${route}`, { scroll: false })
@@ -356,8 +372,6 @@ export default function Component() {
       navigateToStep(step - 1)
     }
   }
-
-  const totalSteps = 12
 
   const isQuestionAnswered = () => {
     switch (step) {
@@ -822,7 +836,9 @@ export default function Component() {
           totalSteps={totalSteps} 
           setStep={handleSetStep} 
         />
-        {renderQuestion()}
+        <div className="transition-all duration-300 ease-in-out opacity-100">
+          {renderQuestion()}
+        </div>
         <div className="mt-8 flex flex-wrap gap-3 items-center">
           {step > 1 && (
             <Button 

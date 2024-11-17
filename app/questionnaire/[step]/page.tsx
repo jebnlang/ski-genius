@@ -1,17 +1,11 @@
 import { Suspense } from 'react'
-import Component from '@/components/Questionnaire'
+import Questionnaire from '@/components/Questionnaire'
+import Loading from './loading'
 
-type Props = {
-  params: Promise<{ step: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}
-
-export default async function QuestionnairePage(props: Props) {
-  await Promise.all([props.params, props.searchParams])
-    
+export default function QuestionnairePage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <Component />
+    <Suspense fallback={<Loading />}>
+      <Questionnaire />
     </Suspense>
   )
 } 
