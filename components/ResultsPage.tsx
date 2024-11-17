@@ -840,8 +840,44 @@ const getPriceTag = (price: string | undefined): string => {
   }
 };
 
+// Update the processAndValidateResults function to remove database saving
+const processAndValidateResults = async (
+  aiResults: Resort[], 
+  validResorts: DBResort[]
+): Promise<Resort[]> => {
+  console.log('Phase 2 - Step 3: Processing AI results');
+  console.log('AI returned results:', aiResults);
+
+  const validResortsMap = new Map(validResorts.map(r => [r.resort_name.toLowerCase(), r]));
+
+  const validatedResults = aiResults
+    .filter(resort => validResortsMap.has(resort.name.toLowerCase()))
+    .map(resort => {
+      const matchedResort = validResortsMap.get(resort.name.toLowerCase());
+      return {
+        ...resort,
+        homepage_url: matchedResort?.homepage_url,
+        tour_operators: {
+          weski_url: matchedResort?.weski,
+          crystal_ski_url: matchedResort?.crystal_ski,
+          iglu_ski_url: matchedResort?.iglu_ski,
+          ski_deal_url: matchedResort?.skideal
+        }
+      };
+    });
+  console.log('Validated results:', validatedResults);
+  return validatedResults;
+}
+
+// Update the saveToDatabase function
 const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[]) => {
   try {
+    // Only proceed if we have resorts to save
+    if (!resorts || resorts.length === 0) {
+      console.log('No resorts to save to database');
+      return;
+    }
+
     // First, save questionnaire answers
     const { data: questionnaireData, error: questionnaireError } = await supabase
       .from('questionnaire_answers')
@@ -862,63 +898,64 @@ const saveToDatabase = async (answers: StorageState['answers'], resorts: Resort[
         additional_info: answers.additionalInfo,
         pricing_sensitivity: answers.pricingSensitivity
       }])
-      .select()
+      .select();
 
     if (questionnaireError) {
-      throw new Error(`Error saving questionnaire: ${questionnaireError.details || questionnaireError.message}`)
+      throw new Error(`Error saving questionnaire: ${questionnaireError.details || questionnaireError.message}`);
     }
 
-    // Only save the best match (first resort)
-    const bestMatch = resorts[0]
-    const questionnaireId = questionnaireData[0].id
-    
-    // Calculate price tag based on six day pass price
-    let priceTag = "Unknown"
-    if (bestMatch.pricing?.sixDayPass) {
-      const price = parseFloat(bestMatch.pricing.sixDayPass.replace(/[€$£]/g, ''))
-      if (price <= 200) {
-        priceTag = "Budget"
-      } else if (price <= 300) {
-        priceTag = "Mid-Range"
-      } else {
-        priceTag = "Premium"
+    const questionnaireId = questionnaireData[0].id;
+
+    // Get the actual displayed resorts (max 3)
+    const displayedResorts = resorts.slice(0, 3);
+
+    // Save only the displayed resorts
+    for (const [index, resort] of displayedResorts.entries()) {
+      const priceTag = getPriceTag(resort.pricing?.sixDayPass);
+      
+      // Determine the match tag based on position
+      const matchTag = answers.additionalInfo?.startsWith('Show me information about ')
+        ? 'Direct Selection'
+        : index === 0 
+          ? 'Best Match' 
+          : index === 1 
+            ? 'Perfect Alternative' 
+            : 'Surprise Pick';
+
+      const { error: resortError } = await supabase
+        .from('resort_recommendations')
+        .insert([{
+          questionnaire_id: questionnaireId,
+          name: resort.name,
+          location: resort.location,
+          country: resort.country,
+          difficulty: resort.difficulty,
+          runs: resort.runs,
+          ski_area: resort.skiArea,
+          number_of_lifts: resort.numberOfLifts,
+          village_altitude: resort.villageAltitude,
+          ski_range: resort.skiRange,
+          nightlife: resort.nightlife,
+          highlights: resort.highlights,
+          explanation: resort.explanation,
+          daily_pass_price: resort.pricing?.dailyPass,
+          six_day_pass_price: resort.pricing?.sixDayPass,
+          match_tag: matchTag,
+          price_tag: priceTag
+        }]);
+
+      if (resortError) {
+        console.error('Error saving resort:', resortError);
+        throw new Error(`Error saving resort: ${resortError.details || resortError.message}`);
       }
     }
 
-    console.log('Saving resort with price tag:', priceTag)
-    console.log('Six day pass price:', bestMatch.pricing?.sixDayPass)
-    
-    const { error: resortError } = await supabase
-      .from('resort_recommendations')
-      .insert([{
-        questionnaire_id: questionnaireId,
-        name: bestMatch.name,
-        location: bestMatch.location,
-        country: bestMatch.country,
-        difficulty: bestMatch.difficulty,
-        runs: bestMatch.runs,
-        ski_area: bestMatch.skiArea,
-        number_of_lifts: bestMatch.numberOfLifts,
-        village_altitude: bestMatch.villageAltitude,
-        ski_range: bestMatch.skiRange,
-        nightlife: bestMatch.nightlife,
-        highlights: bestMatch.highlights,
-        explanation: bestMatch.explanation,
-        daily_pass_price: bestMatch.pricing?.dailyPass,
-        six_day_pass_price: bestMatch.pricing?.sixDayPass,
-        match_tag: 'Best Match',
-        price_tag: priceTag  // Make sure this matches your column name exactly
-      }])
-
-    if (resortError) {
-      console.error('Error saving resort:', resortError)
-      throw new Error(`Error saving resort: ${resortError.details || resortError.message}`)
-    }
+    console.log(`Successfully saved ${displayedResorts.length} displayed resorts to database`);
   } catch (error) {
-    console.error('Database error:', error)
-    throw error
+    console.error('Database error:', error);
+    throw error;
   }
-}
+};
 
 // Update the RefinementDialog component
 const RefinementDialog = ({ 
@@ -1748,36 +1785,6 @@ Remember: A partial match is better than no match. Focus on finding resorts that
   return modifiedPrompt;
 }
 
-// Update the processAndValidateResults function with correct column names
-const processAndValidateResults = async (
-  aiResults: Resort[], 
-  validResorts: DBResort[]
-): Promise<Resort[]> => {
-  console.log('Phase 2 - Step 3: Processing AI results');
-  console.log('AI returned results:', aiResults);
-
-  const validResortsMap = new Map(validResorts.map(r => [r.resort_name.toLowerCase(), r]));
-
-  const validatedResults = aiResults
-    .filter(resort => validResortsMap.has(resort.name.toLowerCase()))
-    .map(resort => {
-      const matchedResort = validResortsMap.get(resort.name.toLowerCase());
-      return {
-        ...resort,
-        homepage_url: matchedResort?.homepage_url,
-        tour_operators: {
-          weski_url: matchedResort?.weski,
-          crystal_ski_url: matchedResort?.crystal_ski,
-          iglu_ski_url: matchedResort?.iglu_ski,
-          ski_deal_url: matchedResort?.skideal
-        }
-      };
-    });
-
-  console.log('Validated results:', validatedResults);
-  return validatedResults;
-}
-
 // Update the TourOperatorCTA component with bigger logos
 const TourOperatorCTA = ({ 
   name, 
@@ -1830,6 +1837,9 @@ export default function ResultsPage() {
   const [seenResorts, setSeenResorts] = useState<Set<string>>(new Set())
   const [currentFact, setCurrentFact] = useState(SKI_FACTS[Math.floor(Math.random() * SKI_FACTS.length)])
   const [validationListCache, setValidationListCache] = useState<DBResort[] | null>(null);
+  const [resultsSaved, setResultsSaved] = useState(false);
+  // Add this state to track if we have final results
+  const [hasFinalResults, setHasFinalResults] = useState(false);
   
   const router = useRouter()
   const { complete } = useCompletion({
@@ -1892,6 +1902,8 @@ export default function ResultsPage() {
     try {
       setIsLoading(true)
       setError(null)
+      setResultsSaved(false) // Reset the flag when updating preferences
+      setHasFinalResults(false) // Reset final results flag
 
       const storageData: StorageState = {
         answers: newAnswers,
@@ -1900,15 +1912,24 @@ export default function ResultsPage() {
       }
       localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
 
-      const completion = await complete(constructPrompt(newAnswers))
+      // Get all data before showing results
+      const [validResorts, completion] = await Promise.all([
+        getValidResortsForCountries(newAnswers.countries),
+        complete(constructPrompt(newAnswers))
+      ]);
+
       const cleanedCompletion = completion?.replace(/```json\n?|```/g, '').trim() || '[]'
       const parsedResorts = JSON.parse(cleanedCompletion)
-      const validatedResorts = validateResorts(parsedResorts, newAnswers.countries)
+      const validatedResorts = await processAndValidateResults(parsedResorts, validResorts)
 
+      // Save to database
+      await saveToDatabase(newAnswers, validatedResorts)
+      
+      // Update everything at once
       setResorts(validatedResorts)
       saveResortsToStorage(validatedResorts)
-      
-      await saveToDatabase(newAnswers, validatedResorts)
+      setResultsSaved(true)
+      setHasFinalResults(true)
 
     } catch (error) {
       setError('Failed to update results. Please try again.')
@@ -1920,6 +1941,8 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
+        if (hasFinalResults) return; // Skip if we already have final results
+        
         setIsLoading(true);
         setError(null);
 
@@ -1931,18 +1954,19 @@ export default function ResultsPage() {
         const { answers } = JSON.parse(savedData) as StorageState;
         const isDirectSelection = answers.additionalInfo?.startsWith('Show me information about ');
 
-        // For direct selection, skip cache check
+        // Check cache first
         if (!isDirectSelection) {
           const cachedResults = await getResortsFromStorage(answers);
           if (cachedResults) {
             console.log('Using cached results:', cachedResults);
             setResorts(cachedResults);
+            setHasFinalResults(true);
             setIsLoading(false);
             return;
           }
         }
 
-        // Start parallel processing
+        // Get all necessary data before showing any results
         const [validResorts, basePrompt] = await Promise.all([
           getValidResortsForCountries(answers.countries),
           Promise.resolve(constructPrompt(answers))
@@ -1952,33 +1976,34 @@ export default function ResultsPage() {
           throw new Error('No resorts found in selected countries. Please try different countries.');
         }
 
-        // Modify prompt with valid resorts
         const modifiedPrompt = modifyPromptWithValidResorts(basePrompt, validResorts);
-        
-        // Make AI API call
         const completion = await complete(modifiedPrompt);
+        
         if (!completion) {
           throw new Error('No response from recommendation service');
         }
 
-        // Parse and validate results
         const cleanedCompletion = completion.replace(/```json\n?|\n?```/g, '').trim();
         const parsedResorts = JSON.parse(cleanedCompletion);
-
-        // For direct selection, ensure we only get one resort
         const resortsToProcess = isDirectSelection ? [parsedResorts] : parsedResorts;
-
-        // First validate the resorts
+        
+        // Process and validate before showing anything
         const finalResorts = await processAndValidateResults(resortsToProcess, validResorts);
 
         if (finalResorts.length === 0) {
           throw new Error('No valid resorts found matching your criteria');
         }
 
-        // Then save to database
-        await saveToDatabase(answers, finalResorts);
+        // Save to database only once we have final results
+        if (!resultsSaved) {
+          await saveToDatabase(answers, finalResorts);
+          setResultsSaved(true);
+        }
 
+        // Set everything at once
         setResorts(finalResorts);
+        setHasFinalResults(true);
+        
         if (!isDirectSelection) {
           saveResortsToStorage(finalResorts);
         }
@@ -1992,7 +2017,7 @@ export default function ResultsPage() {
     };
 
     fetchResults();
-  }, [complete]);
+  }, [complete]); // Remove resultsSaved from dependencies
 
   // Add tracking when resorts are viewed
   useEffect(() => {
@@ -2163,7 +2188,7 @@ export default function ResultsPage() {
 
             {/* Results Cards */}
             <div className="space-y-4">
-              {resorts.map((resort, index) => (
+              {hasFinalResults && resorts.map((resort, index) => (
                 <div key={index} className="transition-all duration-300">
                   {loadingCards[index] ? (
                     <LoadingCard />
