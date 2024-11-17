@@ -206,23 +206,15 @@ export default function Component() {
         </div>
       </section>
 
-      {/* Recent Recommendations Showcase */}
-      <section className="relative py-24 px-4 bg-gradient-to-b from-gray-100 to-blue-100">
-        {/* Background layers */}
-        <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10 pointer-events-none"></div>
-        <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow pointer-events-none"></div>
-        
-        <div className="relative z-10 max-w-6xl mx-auto">
-          <h2 
-            className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800"
-            style={{ 
-              position: 'relative',
-              zIndex: 20
-            }}
-          >
+      {/* Recent Recommendations Section */}
+      <section 
+        id="recent-recommendations" 
+        className="py-24 px-4 bg-white bg-opacity-40 backdrop-blur-md"
+      >
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">
             Recent Recommendations
           </h2>
-          
           {isLoading ? (
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
@@ -231,89 +223,31 @@ export default function Component() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {recentRecommendations.map((resort) => (
                 <Card 
-                  key={resort.id} 
-                  className="h-full flex flex-col transition-transform duration-300 hover:scale-105 bg-white/95 backdrop-blur-md border-white shadow-lg hover:shadow-xl cursor-pointer"
-                  onClick={() => {
-                    // Create default answers with only the selected resort
-                    const defaultAnswers = {
-                      groupType: '',
-                      childrenAges: [],
-                      sportType: '',
-                      countries: [resort.country], // Set the country of the selected resort
-                      skiingLevels: [],
-                      snowPark: '',
-                      offPiste: '',
-                      pricingSensitivity: 'Flexible',
-                      lessons: '',
-                      nightlife: '',
-                      skiInSkiOut: '',
-                      resortPreferences: [],
-                      otherActivities: [],
-                      travelTime: '',
-                      travelMonth: [],
-                      additionalInfo: `Show me information about ${resort.name}` // Set the resort name
-                    };
-
-                    // Save to localStorage
-                    localStorage.setItem('ski_questionnaire_data', JSON.stringify({
-                      answers: defaultAnswers,
-                      lastUpdated: new Date().toISOString(),
-                      currentStep: 12
-                    }));
-
-                    // Clear previous results
-                    localStorage.removeItem('ski_resort_results');
-
-                    // Navigate to results page
-                    router.push('/results');
-                  }}
+                  key={resort.id}
+                  className="bg-white bg-opacity-90 backdrop-blur-md border-white shadow-md 
+                    transition-all duration-300 hover:shadow-lg hover:scale-105"
                 >
-                  <CardContent className="p-6 flex flex-col h-full">
-                    <div className="flex-1">
-                      <div className="mb-4">
-                        <h3 className="font-bold text-xl text-gray-800">{resort.name}</h3>
-                        <p className="text-sm text-gray-600">{resort.location}, {resort.country}</p>
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{resort.name}</h3>
+                    <p className="text-gray-600 mb-4">{resort.location}, {resort.country}</p>
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Daily Pass:</span>
+                        <span className="font-semibold">{resort.daily_pass_price}</span>
                       </div>
-
-                      <div className="space-y-4">
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-gray-50 p-2 rounded-lg">
-                            <p className="text-xs text-gray-500">Lifts</p>
-                            <p className="font-semibold text-gray-800">{resort.number_of_lifts}</p>
-                          </div>
-                          <div className="bg-gray-50 p-2 rounded-lg">
-                            <p className="text-xs text-gray-500">Altitude</p>
-                            <p className="font-semibold text-gray-800">{resort.village_altitude}</p>
-                          </div>
-                        </div>
-
-                        {/* Highlights */}
-                        <div>
-                          <h4 className="font-semibold text-sm text-gray-700 mb-2">Highlights</h4>
-                          <ul className="space-y-1">
-                            {resort.highlights.slice(0, 3).map((highlight, index) => (
-                              <li key={index} className="text-sm text-gray-600 flex items-start">
-                                <span className="mr-2 text-blue-500">•</span>
-                                {highlight}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">6-Day Pass:</span>
+                        <span className="font-semibold">{resort.six_day_pass_price}</span>
                       </div>
-                    </div>
-
-                    {/* Bottom section with ski pass pricing */}
-                    <div className="mt-6 pt-4 border-t border-gray-100">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Daily Pass:</span>
-                          <span className="font-semibold">€{resort.daily_pass_price}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">6-Day Pass:</span>
-                          <span className="font-semibold">€{resort.six_day_pass_price}</span>
-                        </div>
+                      <div className="pt-4 border-t border-gray-200">
+                        <ul className="space-y-2">
+                          {resort.highlights.slice(0, 3).map((highlight, index) => (
+                            <li key={index} className="text-sm text-gray-600 flex items-start">
+                              <span className="mr-2 text-blue-500">•</span>
+                              {highlight}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
                   </CardContent>
@@ -321,18 +255,22 @@ export default function Component() {
               ))}
             </div>
           ) : (
-            <div className="text-center text-gray-600">
-              <p>No recommendations available yet.</p>
-            </div>
+            <p className="text-center text-gray-600">No recommendations available yet.</p>
           )}
         </div>
       </section>
 
-      {/* Available Resorts Section */}
-      <section className="py-24 px-4 bg-white bg-opacity-40 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto">
+      {/* Top Resorts Section */}
+      <section 
+        id="top-resorts" 
+        className="py-24 px-4 bg-gradient-to-b from-gray-100 to-blue-100 relative"
+      >
+        <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
+        <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow"></div>
+        
+        <div className="max-w-6xl mx-auto relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">
-            Explore Our Resort Collection
+            Europe and North America's Top Ski Resorts
           </h2>
           
           {isLoadingResorts ? (
@@ -340,14 +278,14 @@ export default function Component() {
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {Object.entries(groupResortsByCountry(availableResorts)).map(([country, resorts]) => {
                 const isExpanded = expandedCountries[country] || false;
                 const visibleResorts = isExpanded ? resorts : resorts.slice(0, 3);
                 const remainingCount = resorts.length - 3;
 
                 return (
-                  <Card key={country} className="bg-white bg-opacity-40 backdrop-blur-md border-gray-200">
+                  <Card key={country} className="bg-white bg-opacity-90 backdrop-blur-md border-gray-200">
                     <CardContent className="p-4">
                       <h3 className="text-sm font-bold mb-2 text-blue-600 border-b border-blue-100 pb-1">
                         {country}
@@ -357,34 +295,7 @@ export default function Component() {
                           <li 
                             key={resort}
                             onClick={() => {
-                              // Preserve existing click handler logic
-                              const defaultAnswers = {
-                                groupType: '',
-                                childrenAges: [],
-                                sportType: '',
-                                countries: [country],
-                                skiingLevels: [],
-                                snowPark: '',
-                                offPiste: '',
-                                pricingSensitivity: 'Flexible',
-                                lessons: '',
-                                nightlife: '',
-                                skiInSkiOut: '',
-                                resortPreferences: [],
-                                otherActivities: [],
-                                travelTime: '',
-                                travelMonth: [],
-                                additionalInfo: `Show me information about ${resort}`
-                              };
-
-                              localStorage.setItem('ski_questionnaire_data', JSON.stringify({
-                                answers: defaultAnswers,
-                                lastUpdated: new Date().toISOString(),
-                                currentStep: 12
-                              }));
-
-                              localStorage.removeItem('ski_resort_results');
-                              router.push('/results');
+                              router.push(`/results?resort=${encodeURIComponent(resort)}`);
                             }}
                             className="text-sm text-gray-700 hover:text-blue-600 transition-colors cursor-pointer hover:bg-blue-50 px-2 py-1 rounded-md"
                           >

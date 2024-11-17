@@ -1844,6 +1844,11 @@ export default function ResultsPage() {
     api: '/api/chat',
   })
 
+  // Add at the beginning of the component
+  useEffect(() => {
+    localStorage.setItem('has_viewed_results', 'true')
+  }, [])
+
   // Keep only this optimized version of handleRemoveResort
   const handleRemoveResort = async (index: number) => {
     trackResortRemoval(resorts[index].name);

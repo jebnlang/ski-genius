@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -15,7 +15,14 @@ import { Button } from "@/components/ui/button"
 
 const Navbar = () => {
   const [showDialog, setShowDialog] = useState(false)
+  const [hasViewedResults, setHasViewedResults] = useState(false)
   const router = useRouter()
+
+  // Check if user has viewed results
+  useEffect(() => {
+    const hasViewed = localStorage.getItem('has_viewed_results')
+    setHasViewedResults(!!hasViewed)
+  }, [])
 
   const handleResultsClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -25,6 +32,15 @@ const Navbar = () => {
       setShowDialog(true)
     } else {
       router.push('/results')
+    }
+  }
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    } else {
+      router.push('/#' + sectionId)
     }
   }
 
@@ -57,13 +73,27 @@ const Navbar = () => {
                 >
                   Find Your Resort
                 </Link>
-                <a
-                  href="/results"
-                  onClick={handleResultsClick}
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium cursor-pointer"
+                {hasViewedResults && (
+                  <a
+                    href="/results"
+                    onClick={handleResultsClick}
+                    className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium cursor-pointer"
+                  >
+                    Results
+                  </a>
+                )}
+                <button
+                  onClick={() => scrollToSection('recent-recommendations')}
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                 >
-                  Results
-                </a>
+                  Recent Recommendations
+                </button>
+                <button
+                  onClick={() => scrollToSection('top-resorts')}
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Top Resorts
+                </button>
               </div>
             </div>
           </div>
