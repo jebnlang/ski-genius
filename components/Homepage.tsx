@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, Snowflake, Users, MapPin } from 'lucide-react'
+import { ArrowRight, Snowflake, Users, MapPin, Calendar } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
@@ -114,18 +114,39 @@ export default function Component() {
       <section className="py-24 px-4 bg-white bg-opacity-40 backdrop-blur-md">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">How It Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
-              { title: 'Share Your Preferences', description: 'Tell us about your ideal ski trip', icon: Users },
-              { title: 'AI Analysis', description: 'Our AI processes your unique needs', icon: Snowflake },
-              { title: 'Get Matched', description: 'Receive personalized resort recommendations', icon: MapPin },
+              { 
+                title: 'Share Your Preferences', 
+                description: 'Tell us about your ideal ski trip experience and requirements', 
+                icon: Users 
+              },
+              { 
+                title: 'AI Analysis', 
+                description: 'Our AI matches you with perfect resorts based on your criteria', 
+                icon: Snowflake 
+              },
+              { 
+                title: 'Get Matched', 
+                description: 'Review personalized resort recommendations with detailed insights', 
+                icon: MapPin 
+              },
+              { 
+                title: 'Book Your Trip', 
+                description: 'Connect with top ski tour operators for the best holiday packages', 
+                icon: Calendar 
+              },
             ].map((step, index) => (
-              <div key={index} className="text-center flex flex-col items-center">
+              <div key={index} className="text-center flex flex-col items-center relative">
+                {/* Connection line between steps */}
+                {index < 3 && (
+                  <div className="hidden md:block absolute top-10 -right-4 w-8 h-0.5 bg-blue-200" />
+                )}
                 <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl font-bold mb-6">
                   {<step.icon className="w-10 h-10" />}
                 </div>
                 <h3 className="text-xl font-semibold mb-3 text-gray-800">{step.title}</h3>
-                <p className="text-gray-600">{step.description}</p>
+                <p className="text-gray-600 text-sm">{step.description}</p>
               </div>
             ))}
           </div>
