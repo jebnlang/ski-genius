@@ -12,11 +12,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Menu } from 'lucide-react'
 
 const Navbar = () => {
   const [showDialog, setShowDialog] = useState(false)
   const [hasViewedResults, setHasViewedResults] = useState(false)
   const router = useRouter()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Check if user has viewed results
   useEffect(() => {
@@ -96,7 +98,62 @@ const Navbar = () => {
                 </button>
               </div>
             </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+            </div>
           </div>
+
+          {/* Mobile Menu Dropdown */}
+          {mobileMenuOpen && (
+            <div className="md:hidden">
+              <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
+                <Link
+                  href="/questionnaire"
+                  className="block text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Find Your Resort
+                </Link>
+                {hasViewedResults && (
+                  <a
+                    href="/results"
+                    onClick={(e) => {
+                      handleResultsClick(e)
+                      setMobileMenuOpen(false)
+                    }}
+                    className="block text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium"
+                  >
+                    Results
+                  </a>
+                )}
+                <button
+                  onClick={() => {
+                    scrollToSection('recent-recommendations')
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full text-left text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium"
+                >
+                  Recent Recommendations
+                </button>
+                <button
+                  onClick={() => {
+                    scrollToSection('top-resorts')
+                    setMobileMenuOpen(false)
+                  }}
+                  className="w-full text-left text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md text-base font-medium"
+                >
+                  Top Resorts
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 

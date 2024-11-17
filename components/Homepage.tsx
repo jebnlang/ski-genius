@@ -164,9 +164,11 @@ export default function Component() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-24 px-4 bg-white bg-opacity-40 backdrop-blur-md">
+      <section className="py-24 px-4 bg-white/80 backdrop-blur-md relative border-y border-blue-100">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">How It Works</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-900">
+            How It Works
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
               { 
@@ -209,10 +211,11 @@ export default function Component() {
       {/* Recent Recommendations Section */}
       <section 
         id="recent-recommendations" 
-        className="py-24 px-4 bg-white bg-opacity-40 backdrop-blur-md"
+        className="py-24 px-4 bg-white relative"
       >
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">
+        <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-5"></div>
+        <div className="max-w-6xl mx-auto relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-900">
             Recent Recommendations
           </h2>
           {isLoading ? (
@@ -260,16 +263,22 @@ export default function Component() {
         </div>
       </section>
 
+      {/* Decorative Divider */}
+      <div className="relative h-24 bg-gradient-to-b from-white to-blue-50">
+        <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-5"></div>
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent"></div>
+      </div>
+
       {/* Top Resorts Section */}
       <section 
         id="top-resorts" 
-        className="py-24 px-4 bg-gradient-to-b from-gray-100 to-blue-100 relative"
+        className="py-24 px-4 bg-blue-50 relative"
       >
-        <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10"></div>
-        <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow"></div>
+        <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-5"></div>
+        <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow opacity-20"></div>
         
         <div className="max-w-6xl mx-auto relative z-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-900">
             Europe and North America&apos;s Top Ski Resorts
           </h2>
           
