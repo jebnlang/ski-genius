@@ -203,9 +203,21 @@ export default function Component() {
       </section>
 
       {/* Recent Recommendations Showcase */}
-      <section className="py-24 px-4 bg-gradient-to-b from-gray-100 to-blue-100">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800">Recent Recommendations</h2>
+      <section className="relative py-24 px-4 bg-gradient-to-b from-gray-100 to-blue-100">
+        {/* Background layers */}
+        <div className="absolute inset-0 bg-[url('/ski-pattern.svg')] bg-repeat opacity-10 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/snow-texture-NRGzCHAZXYXOZQVXZXXXXXXXXXXX.png')] bg-repeat animate-snow pointer-events-none"></div>
+        
+        <div className="relative z-10 max-w-6xl mx-auto">
+          <h2 
+            className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-800"
+            style={{ 
+              position: 'relative',
+              zIndex: 20
+            }}
+          >
+            Recent Recommendations
+          </h2>
           
           {isLoading ? (
             <div className="text-center">
@@ -216,7 +228,7 @@ export default function Component() {
               {recentRecommendations.map((resort) => (
                 <Card 
                   key={resort.id} 
-                  className="overflow-hidden transition-transform duration-300 hover:scale-105 bg-white bg-opacity-40 backdrop-blur-md border border-white cursor-pointer"
+                  className="h-full flex flex-col transition-transform duration-300 hover:scale-105 bg-white/95 backdrop-blur-md border-white shadow-lg hover:shadow-xl cursor-pointer"
                   onClick={() => {
                     // Create default answers with only the selected resort
                     const defaultAnswers = {
@@ -252,37 +264,76 @@ export default function Component() {
                     router.push('/results');
                   }}
                 >
-                  <CardContent className="p-0">
-                    <div className="p-6">
-                      <h3 className="font-bold text-xl mb-2 text-gray-800">{resort.name}</h3>
-                      <p className="text-sm text-gray-600 mb-1">{resort.location}, {resort.country}</p>
-                      
-                      {/* Stats badges */}
-                      <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {resort.ski_area} km of runs
-                        </span>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {resort.number_of_lifts} lifts
-                        </span>
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="flex-1">
+                      <div className="mb-4">
+                        <h3 className="font-bold text-xl text-gray-800">{resort.name}</h3>
+                        <p className="text-sm text-gray-600">{resort.location}, {resort.country}</p>
                       </div>
 
-                      {/* Highlights */}
-                      <div className="mb-3">
-                        <h4 className="font-semibold text-sm text-gray-700 mb-2">Highlights:</h4>
-                        <ul className="list-disc list-inside space-y-1">
-                          {resort.highlights.map((highlight, index) => (
-                            <li key={index} className="text-sm text-gray-600">{highlight}</li>
-                          ))}
-                        </ul>
-                      </div>
+                      <div className="space-y-4">
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-gray-50 p-2 rounded-lg">
+                            <p className="text-xs text-gray-500">Lifts</p>
+                            <p className="font-semibold text-gray-800">{resort.number_of_lifts}</p>
+                          </div>
+                          <div className="bg-gray-50 p-2 rounded-lg">
+                            <p className="text-xs text-gray-500">Altitude</p>
+                            <p className="font-semibold text-gray-800">{resort.village_altitude}</p>
+                          </div>
+                        </div>
 
-                      {/* Resort description */}
-                      {resort.explanation && (
-                        <p className="text-sm text-gray-600 mt-3 italic">
-                          {resort.explanation}
-                        </p>
-                      )}
+                        {/* Highlights */}
+                        <div>
+                          <h4 className="font-semibold text-sm text-gray-700 mb-2">Highlights</h4>
+                          <ul className="space-y-1">
+                            {resort.highlights.slice(0, 3).map((highlight, index) => (
+                              <li key={index} className="text-sm text-gray-600 flex items-start">
+                                <span className="mr-2 text-blue-500">•</span>
+                                {highlight}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom section with proportional difficulty indicators */}
+                    <div className="mt-6 pt-4 border-t border-gray-100">
+                      <div className="flex justify-between items-center">
+                        <div className="flex-1 mr-4">
+                          <div className="flex h-2 rounded-full overflow-hidden">
+                            <div 
+                              className="bg-green-400" 
+                              style={{ 
+                                width: `${(resort.runs.easy / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` 
+                              }} 
+                              title={`${resort.runs.easy} easy runs`}
+                            />
+                            <div 
+                              className="bg-blue-400" 
+                              style={{ 
+                                width: `${(resort.runs.intermediate / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` 
+                              }} 
+                              title={`${resort.runs.intermediate} intermediate runs`}
+                            />
+                            <div 
+                              className="bg-black" 
+                              style={{ 
+                                width: `${(resort.runs.advanced / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` 
+                              }} 
+                              title={`${resort.runs.advanced} advanced runs`}
+                            />
+                          </div>
+                          <div className="flex justify-between mt-1 text-xs text-gray-500">
+                            <span>{resort.runs.easy}</span>
+                            <span>{resort.runs.intermediate}</span>
+                            <span>{resort.runs.advanced}</span>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-blue-500" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

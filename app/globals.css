@@ -2,6 +2,11 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
  
+* {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -54,6 +59,8 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  -webkit-user-select: text !important;
+  user-select: text !important;
 }
 
 @keyframes snow {
