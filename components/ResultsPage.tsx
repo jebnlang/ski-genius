@@ -2013,7 +2013,7 @@ export default function ResultsPage() {
     };
 
     fetchResults();
-  }, [complete, resultsSaved]); // Add resultsSaved to dependencies
+  }, [complete, resultsSaved]);
 
   // Add tracking when resorts are viewed
   useEffect(() => {

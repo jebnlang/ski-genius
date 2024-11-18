@@ -304,7 +304,37 @@ export default function Component() {
                           <li 
                             key={resort}
                             onClick={() => {
-                              router.push(`/results?resort=${encodeURIComponent(resort)}`);
+                              // Clear previous questionnaire data
+                              localStorage.removeItem('ski_questionnaire_data')
+                              localStorage.removeItem('ski_resort_results')
+                              
+                              // Set new questionnaire data with only the selected resort
+                              const storageData = {
+                                answers: {
+                                  groupType: '',
+                                  childrenAges: [],
+                                  sportType: '',
+                                  countries: [country],
+                                  skiingLevels: [],
+                                  snowPark: '',
+                                  offPiste: '',
+                                  pricingSensitivity: 'Flexible',
+                                  lessons: '',
+                                  nightlife: '',
+                                  skiInSkiOut: '',
+                                  resortPreferences: [],
+                                  otherActivities: [],
+                                  travelTime: '',
+                                  travelMonth: [],
+                                  additionalInfo: `Show me information about ${resort}`
+                                },
+                                lastUpdated: new Date().toISOString(),
+                                currentStep: 12
+                              }
+                              localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
+                              
+                              // Navigate to results page
+                              router.push('/results')
                             }}
                             className="text-sm text-gray-700 hover:text-blue-600 transition-colors cursor-pointer hover:bg-blue-50 px-2 py-1 rounded-md"
                           >
