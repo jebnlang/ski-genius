@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowRight } from 'lucide-react'
+import { trackQuestionnaireCompletion, trackQuickResults } from '@/utils/analytics'
 
 interface Answers {
   groupType: string
@@ -245,6 +246,9 @@ const COUNTRIES_BY_REGION = {
 } as const
 
 const getQuickResults = (currentAnswers: Answers): Answers => {
+  // Track quick results usage
+  trackQuickResults()
+  
   // Create a new object with only the answered questions and specific defaults
   const quickAnswers: Answers = {
     // Questions with no defaults (empty if not answered)
@@ -344,11 +348,13 @@ export default function Component() {
         navigateToStep(step + 1)
       }
     } else {
+      // Track questionnaire completion
+      trackQuestionnaireCompletion()
+      
       // On the final step, ensure all answers are saved before redirecting
       const finalAnswers = {
         ...answers,
-        // Ensure any empty required fields have defaults
-        countries: answers.countries,
+        countries: answers.countries.length ? answers.countries : ['Anywhere in Europe'],
         pricingSensitivity: answers.pricingSensitivity || 'Flexible',
         skiingLevels: answers.skiingLevels.length ? answers.skiingLevels : ['Intermediates']
       }

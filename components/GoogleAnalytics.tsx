@@ -10,12 +10,15 @@ function AnalyticsTracking({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_ID: string })
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const url = pathname + (searchParams?.toString() ?? '')
-
-    // Push the new route to Google Analytics 
-    window.gtag('config', GA_MEASUREMENT_ID, {
-      page_path: url,
-    })
+    if (pathname) {
+      const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '')
+      
+      // Push the new route to Google Analytics 
+      window.gtag('config', GA_MEASUREMENT_ID, {
+        page_path: url,
+        send_page_view: true
+      })
+    }
   }, [pathname, searchParams, GA_MEASUREMENT_ID])
 
   return null
@@ -38,6 +41,7 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
             gtag('js', new Date());
             gtag('config', '${GA_MEASUREMENT_ID}', {
               page_path: window.location.pathname,
+              cookie_flags: 'SameSite=None;Secure'
             });
           `,
         }}
