@@ -59,7 +59,7 @@ const Navbar = () => {
                 width={500}
                 height={160}
                 style={{ 
-                  width: '221px',
+                  width: '188px',
                   height: 'auto',
                 }}
                 priority

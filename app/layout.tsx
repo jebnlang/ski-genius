@@ -1,12 +1,10 @@
 import './globals.css'
-import { Inter } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
 import ClientWrapper from '../components/ClientWrapper'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
 import Hotjar from '@/components/Hotjar'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Your App Name',
@@ -28,7 +26,7 @@ export default function RootLayout({
         <Hotjar siteId={5203689} hotjarVersion={6} />
       </head>
       <body 
-        className={`${inter.className} flex flex-col min-h-screen`}
+        className={`${GeistSans.className} flex flex-col min-h-screen`}
         suppressHydrationWarning={true}
       >
         <Navbar />

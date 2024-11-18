@@ -32,7 +32,7 @@ const defaultAnswers: Answers = {
   groupType: '',
   childrenAges: [],
   sportType: '',
-  countries: ['Anywhere in Europe'],
+  countries: [],
   skiingLevels: [],
   snowPark: '',
   offPiste: '',
@@ -348,7 +348,7 @@ export default function Component() {
       const finalAnswers = {
         ...answers,
         // Ensure any empty required fields have defaults
-        countries: answers.countries.length ? answers.countries : ['Anywhere in Europe'],
+        countries: answers.countries,
         pricingSensitivity: answers.pricingSensitivity || 'Flexible',
         skiingLevels: answers.skiingLevels.length ? answers.skiingLevels : ['Intermediates']
       }
