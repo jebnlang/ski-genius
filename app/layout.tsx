@@ -7,10 +7,31 @@ import GoogleAnalytics from '@/components/GoogleAnalytics'
 import Hotjar from '@/components/Hotjar'
 
 export const metadata = {
-  title: 'Your App Name',
-  description: 'Your app description',
+  title: 'SkiGenius',
+  description: 'Discover your perfect ski getaway with our AI-powered platform. Tailored recommendations, expert insights, and seamless booking make planning your ski holiday effortless—whether you\'re a first-timer or a seasoned skier. Explore, compare, and book all in one place!',
   icons: {
     icon: '/favicon.ico',
+  },
+  openGraph: {
+    title: 'SkiGenius',
+    description: 'Discover your perfect ski getaway with our AI-powered platform. Tailored recommendations, expert insights, and seamless booking make planning your ski holiday effortless—whether you\'re a first-timer or a seasoned skier. Explore, compare, and book all in one place!',
+    images: [
+      {
+        url: '/logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'SkiGenius Logo',
+      },
+    ],
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'SkiGenius',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SkiGenius',
+    description: 'Discover your perfect ski getaway with our AI-powered platform. Tailored recommendations, expert insights, and seamless booking make planning your ski holiday effortless—whether you\'re a first-timer or a seasoned skier. Explore, compare, and book all in one place!',
+    images: ['/logo.png'],
   },
 }
 
