@@ -227,26 +227,148 @@ export default function Component() {
               {recentRecommendations.map((resort) => (
                 <Card 
                   key={resort.id}
+                  onClick={() => {
+                    // Clear previous questionnaire data
+                    localStorage.removeItem('ski_questionnaire_data')
+                    localStorage.removeItem('ski_resort_results')
+                    
+                    // Set new questionnaire data with only the selected resort
+                    const storageData = {
+                      answers: {
+                        groupType: '',
+                        childrenAges: [],
+                        sportType: '',
+                        countries: [resort.country],
+                        skiingLevels: [],
+                        snowPark: '',
+                        offPiste: '',
+                        pricingSensitivity: 'Flexible',
+                        lessons: '',
+                        nightlife: '',
+                        skiInSkiOut: '',
+                        resortPreferences: [],
+                        otherActivities: [],
+                        travelTime: '',
+                        travelMonth: [],
+                        additionalInfo: `Show me information about ${resort.name}`
+                      },
+                      lastUpdated: new Date().toISOString(),
+                      currentStep: 12
+                    }
+                    localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
+                    
+                    // Navigate to results page
+                    router.push('/results')
+                  }}
                   className="bg-white bg-opacity-90 backdrop-blur-md border-white shadow-md 
-                    transition-all duration-300 hover:shadow-lg hover:scale-105"
+                    transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer h-full"
                 >
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">{resort.name}</h3>
-                    <p className="text-gray-600 mb-4">{resort.location}, {resort.country}</p>
-                    <div className="space-y-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Daily Pass:</span>
-                        <span className="font-semibold">{resort.daily_pass_price}</span>
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="flex-grow">
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">{resort.name}</h3>
+                      <p className="text-gray-600 mb-4 flex items-center">
+                        <MapPin className="w-4 h-4 mr-1 text-blue-500" />
+                        {resort.location}, {resort.country}
+                      </p>
+
+                      {/* Resort Statistics Grid */}
+                      <div className="grid grid-cols-3 gap-3 mb-4 text-sm">
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <p className="text-gray-600 mb-1">Total Runs</p>
+                          <p className="font-semibold text-gray-800">
+                            {resort.runs.easy + resort.runs.intermediate + resort.runs.advanced} km
+                          </p>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <p className="text-gray-600 mb-1">Altitude</p>
+                          <p className="font-semibold text-gray-800">{resort.village_altitude}m</p>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <p className="text-gray-600 mb-1">Lifts</p>
+                          <p className="font-semibold text-gray-800">{resort.number_of_lifts}</p>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">6-Day Pass:</span>
-                        <span className="font-semibold">{resort.six_day_pass_price}</span>
+
+                      {/* Run Distribution */}
+                      <div className="mb-6">
+                        <p className="text-sm font-semibold text-gray-700 mb-3">Slope Distribution</p>
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <div className="w-20 text-sm text-gray-600">Easy</div>
+                            <div className="flex-grow">
+                              <div className="relative pt-1">
+                                <div className="flex items-center">
+                                  <div className="flex-1">
+                                    <div className="h-2 rounded-full bg-gray-200">
+                                      <div 
+                                        className="h-2 rounded-full bg-green-400" 
+                                        style={{ width: `${(resort.runs.easy / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <span className="ml-2 text-sm text-gray-600">{resort.runs.easy}km</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-20 text-sm text-gray-600">Medium</div>
+                            <div className="flex-grow">
+                              <div className="relative pt-1">
+                                <div className="flex items-center">
+                                  <div className="flex-1">
+                                    <div className="h-2 rounded-full bg-gray-200">
+                                      <div 
+                                        className="h-2 rounded-full bg-blue-400" 
+                                        style={{ width: `${(resort.runs.intermediate / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <span className="ml-2 text-sm text-gray-600">{resort.runs.intermediate}km</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-20 text-sm text-gray-600">Expert</div>
+                            <div className="flex-grow">
+                              <div className="relative pt-1">
+                                <div className="flex items-center">
+                                  <div className="flex-1">
+                                    <div className="h-2 rounded-full bg-gray-200">
+                                      <div 
+                                        className="h-2 rounded-full bg-black" 
+                                        style={{ width: `${(resort.runs.advanced / (resort.runs.easy + resort.runs.intermediate + resort.runs.advanced)) * 100}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <span className="ml-2 text-sm text-gray-600">{resort.runs.advanced}km</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="pt-4 border-t border-gray-200">
+
+                      {/* Price Information */}
+                      <div className="border-t border-gray-100 pt-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Daily Pass:</span>
+                          <span className="font-semibold">€{resort.daily_pass_price}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">6-Day Pass:</span>
+                          <span className="font-semibold">€{resort.six_day_pass_price}</span>
+                        </div>
+                      </div>
+
+                      {/* Highlights */}
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Resort Highlights</p>
                         <ul className="space-y-2">
-                          {resort.highlights.slice(0, 3).map((highlight, index) => (
+                          {resort.highlights.slice(0, 2).map((highlight, index) => (
                             <li key={index} className="text-sm text-gray-600 flex items-start">
-                              <span className="mr-2 text-blue-500">•</span>
+                              <span className="text-blue-500 mr-2">•</span>
                               {highlight}
                             </li>
                           ))}
