@@ -828,7 +828,11 @@ function Questionnaire() {
             <Textarea
               placeholder="Tell us more..."
               value={answers.additionalInfo}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateAnswers({ additionalInfo: e.target.value })}
+              onChange={(e) => {
+                handleInputChange(e);
+                updateAnswers({ additionalInfo: e.target.value });
+              }}
+              name="additionalInfo"
               className="bg-white text-gray-800 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
@@ -843,18 +847,13 @@ function Questionnaire() {
     console.log('Current localStorage data:', savedData ? JSON.parse(savedData) : null)
   }, [pathname]) // Log whenever pathname changes
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    // Add tracking when form is submitted
-    trackQuestionnaireCompletion();
-  };
-
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Add tracking when user interacts with form
+  // Modify handleInputChange to be used with form inputs
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const fieldName = event.target.name || event.target.id;
     trackFormInteraction(
-      event.target.name,
+      fieldName,
       'input_change',
-      `Field: ${event.target.name}`
+      `Field: ${fieldName}`
     );
   };
 
