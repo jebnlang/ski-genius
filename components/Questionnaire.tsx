@@ -359,6 +359,9 @@ function Questionnaire() {
         navigateToStep(step + 1)
       }
     } else {
+      // Track questionnaire completion when user reaches the end
+      trackQuestionnaireCompletion();
+      
       trackEnhancedEvent('questionnaire_complete', 'Questionnaire', {
         label: 'Completion',
         value: totalSteps
