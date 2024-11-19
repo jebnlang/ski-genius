@@ -8,9 +8,13 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowRight } from 'lucide-react'
-import { trackQuestionnaireCompletion, trackQuickResults } from '@/utils/analytics'
+import { 
+  trackQuestionnaireCompletion, 
+  trackQuickResults, 
+  trackFormInteraction, 
+  trackEnhancedEvent 
+} from '@/utils/enhanced-analytics'
 import { withClickTracking } from '@/components/withClickTracking'
-import { trackEnhancedEvent, trackFormInteraction } from '@/utils/enhanced-analytics'
 
 interface Answers {
   groupType: string
@@ -838,6 +842,21 @@ function Questionnaire() {
     const savedData = localStorage.getItem(STORAGE_KEY)
     console.log('Current localStorage data:', savedData ? JSON.parse(savedData) : null)
   }, [pathname]) // Log whenever pathname changes
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    // Add tracking when form is submitted
+    trackQuestionnaireCompletion();
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Add tracking when user interacts with form
+    trackFormInteraction(
+      event.target.name,
+      'input_change',
+      `Field: ${event.target.name}`
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-gray-100 flex items-center justify-center relative overflow-hidden">

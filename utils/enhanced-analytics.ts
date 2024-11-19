@@ -15,19 +15,24 @@ const getSessionId = () => {
   return sessionId;
 };
 
+interface EnhancedEventParams {
+  label?: string;
+  value?: number;
+  element_type?: string;
+  element_id?: string;
+  element_text?: string;
+  element_class?: string;
+  interaction_type?: string;
+  error_details?: string;
+  nonInteraction?: boolean;
+  [key: string]: any;
+}
+
 // Enhanced event tracking
 export const trackEnhancedEvent = (
   action: string,
   category: string,
-  {
-    label,
-    value,
-    element_type,
-    element_id,
-    element_text,
-    nonInteraction = false,
-    ...customProps
-  }: Partial<GoogleAnalyticsEvent>
+  params: EnhancedEventParams = {}
 ) => {
   if (typeof window === 'undefined' || !window.gtag) return;
 
@@ -35,14 +40,8 @@ export const trackEnhancedEvent = (
   
   window.gtag('event', action, {
     event_category: category,
-    event_label: label,
-    value: value,
-    non_interaction: nonInteraction,
+    ...params,
     session_id: sessionId,
-    element_type,
-    element_id,
-    element_text,
-    ...customProps
   });
 };
 
@@ -63,14 +62,16 @@ export const trackClick = (
 
 // Form interaction tracking
 export const trackFormInteraction = (
-  formElement: HTMLFormElement,
-  action: 'start' | 'complete' | 'error',
+  formElement: string | HTMLFormElement,
+  action: 'start' | 'complete' | 'error' | string,
   details?: string
 ) => {
+  const formId = typeof formElement === 'string' ? formElement : formElement.id;
+  
   trackEnhancedEvent('form_interaction', 'Form', {
-    label: `${formElement.id || 'unknown_form'}_${action}`,
+    label: `${formId || 'unknown_form'}_${action}`,
     element_type: 'form',
-    element_id: formElement.id,
+    element_id: formId,
     interaction_type: action,
     error_details: details
   });
@@ -88,5 +89,17 @@ export const trackPageView = (
     page_title: title || document.title,
     page_location: window.location.href,
     session_id: getSessionId()
+  });
+};
+
+export const trackQuestionnaireCompletion = () => {
+  trackEnhancedEvent('questionnaire_complete', 'Questionnaire', {
+    label: 'Completion'
+  });
+};
+
+export const trackQuickResults = () => {
+  trackEnhancedEvent('quick_results', 'Questionnaire', {
+    label: 'Quick Results View'
   });
 }; 

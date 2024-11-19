@@ -6,36 +6,35 @@ export const withClickTracking = <P extends object>(
   category: string
 ) => {
   return function WithClickTrackingComponent(props: P) {
-    const componentRef = useRef<HTMLDivElement>(null);
+    const componentRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
-      if (!componentRef.current) return;
+      const currentRef = componentRef.current;
 
       const handleClick = (event: MouseEvent) => {
-        const target = event.target as HTMLElement;
-        if (!target) return;
+        if (currentRef && currentRef.contains(event.target as Node)) {
+          const target = event.target as HTMLElement;
+          if (!target) return;
 
-        // Find the closest clickable element
-        const clickableElement = target.closest('button, a, [role="button"]');
-        if (clickableElement) {
-          trackClick(
-            clickableElement as HTMLElement,
-            category,
-            clickableElement.getAttribute('data-tracking-label') || undefined
-          );
+          // Find the closest clickable element
+          const clickableElement = target.closest('button, a, [role="button"]');
+          if (clickableElement) {
+            trackClick(
+              clickableElement as HTMLElement,
+              category,
+              clickableElement.getAttribute('data-tracking-label') || undefined
+            );
+          }
         }
       };
 
-      componentRef.current.addEventListener('click', handleClick);
+      document.addEventListener('click', handleClick);
+
       return () => {
-        componentRef.current?.removeEventListener('click', handleClick);
+        document.removeEventListener('click', handleClick);
       };
     }, []);
 
-    return (
-      <div ref={componentRef}>
-        <WrappedComponent {...props} />
-      </div>
-    );
+    return <WrappedComponent {...props} ref={componentRef} />;
   };
 }; 
