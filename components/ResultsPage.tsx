@@ -28,6 +28,8 @@ import Fuse from 'fuse.js'
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { withClickTracking } from '@/components/withClickTracking'
+import { trackEnhancedEvent } from '@/utils/enhanced-analytics'
 
 // Define all necessary types
 interface StorageState {
@@ -1833,7 +1835,7 @@ const TourOperatorCTA = ({
   </a>
 );
 
-export default function ResultsPage() {
+export function ResultsPage() {
   const [resorts, setResorts] = useState<Resort[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -2205,6 +2207,9 @@ export default function ResultsPage() {
     </div>
   )
 }
+
+// Wrap the component with click tracking
+export default withClickTracking(ResultsPage, 'Results');
 
 // Helper function remains outside the component
 const hasAdvancedSkiers = (skiingLevels: string[]): boolean => {

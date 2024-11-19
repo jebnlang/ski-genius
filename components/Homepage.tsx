@@ -6,6 +6,8 @@ import { ArrowRight, Snowflake, Users, MapPin, Calendar } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
+import { withClickTracking } from '@/components/withClickTracking';
+import { trackEnhancedEvent } from '@/utils/enhanced-analytics';
 
 interface RecentResort {
   id: string
@@ -39,7 +41,7 @@ interface AvailableResort {
   country: string
 }
 
-export default function Component() {
+function Homepage() {
   const router = useRouter()
   const [recentRecommendations, setRecentRecommendations] = useState<RecentResort[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -115,10 +117,70 @@ export default function Component() {
   }, [])
 
   const handleStartNewSearch = () => {
+    trackEnhancedEvent('start_search', 'Navigation', {
+      label: 'New Search',
+      interaction_type: 'button_click'
+    });
     localStorage.removeItem('ski_questionnaire_data')
     localStorage.removeItem('ski_resort_results')
     router.push('/questionnaire')
   }
+
+  const handleResortCardClick = (resort: RecentResort | string) => {
+    // If resort is a string, create a minimal RecentResort object
+    const resortData = typeof resort === 'string' 
+      ? {
+          name: resort,
+          country: '', // You might want to look up the country from availableResorts
+          daily_pass_price: 0
+        } as RecentResort
+      : resort;
+
+    trackEnhancedEvent('view_resort', 'Resort Interaction', {
+      label: resortData.name,
+      element_type: 'card',
+      value: resortData.daily_pass_price
+    });
+
+    // Clear previous questionnaire data
+    localStorage.removeItem('ski_questionnaire_data');
+    localStorage.removeItem('ski_resort_results');
+    
+    // Find country if resort is a string
+    let country = resortData.country;
+    if (typeof resort === 'string') {
+      const foundResort = availableResorts.find(r => r.resort_name === resort);
+      country = foundResort?.country || '';
+    }
+    
+    // Set new questionnaire data
+    const storageData = {
+      answers: {
+        groupType: '',
+        childrenAges: [],
+        sportType: '',
+        countries: [country],
+        skiingLevels: [],
+        snowPark: '',
+        offPiste: '',
+        pricingSensitivity: 'Flexible',
+        lessons: '',
+        nightlife: '',
+        skiInSkiOut: '',
+        resortPreferences: [],
+        otherActivities: [],
+        travelTime: '',
+        travelMonth: [],
+        additionalInfo: `Show me information about ${resortData.name}`
+      },
+      lastUpdated: new Date().toISOString(),
+      currentStep: 12
+    };
+    localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData));
+    
+    // Navigate to results page
+    router.push('/results');
+  };
 
   const groupResortsByCountry = (resorts: AvailableResort[]) => {
     return resorts.reduce((acc, resort) => {
@@ -227,39 +289,7 @@ export default function Component() {
               {recentRecommendations.map((resort) => (
                 <Card 
                   key={resort.id}
-                  onClick={() => {
-                    // Clear previous questionnaire data
-                    localStorage.removeItem('ski_questionnaire_data')
-                    localStorage.removeItem('ski_resort_results')
-                    
-                    // Set new questionnaire data with only the selected resort
-                    const storageData = {
-                      answers: {
-                        groupType: '',
-                        childrenAges: [],
-                        sportType: '',
-                        countries: [resort.country],
-                        skiingLevels: [],
-                        snowPark: '',
-                        offPiste: '',
-                        pricingSensitivity: 'Flexible',
-                        lessons: '',
-                        nightlife: '',
-                        skiInSkiOut: '',
-                        resortPreferences: [],
-                        otherActivities: [],
-                        travelTime: '',
-                        travelMonth: [],
-                        additionalInfo: `Show me information about ${resort.name}`
-                      },
-                      lastUpdated: new Date().toISOString(),
-                      currentStep: 12
-                    }
-                    localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
-                    
-                    // Navigate to results page
-                    router.push('/results')
-                  }}
+                  onClick={() => handleResortCardClick(resort)}
                   className="bg-white bg-opacity-90 backdrop-blur-md border-white shadow-md 
                     transition-all duration-300 hover:shadow-lg hover:scale-105 cursor-pointer h-full"
                 >
@@ -425,39 +455,7 @@ export default function Component() {
                         {visibleResorts.map((resort) => (
                           <li 
                             key={resort}
-                            onClick={() => {
-                              // Clear previous questionnaire data
-                              localStorage.removeItem('ski_questionnaire_data')
-                              localStorage.removeItem('ski_resort_results')
-                              
-                              // Set new questionnaire data with only the selected resort
-                              const storageData = {
-                                answers: {
-                                  groupType: '',
-                                  childrenAges: [],
-                                  sportType: '',
-                                  countries: [country],
-                                  skiingLevels: [],
-                                  snowPark: '',
-                                  offPiste: '',
-                                  pricingSensitivity: 'Flexible',
-                                  lessons: '',
-                                  nightlife: '',
-                                  skiInSkiOut: '',
-                                  resortPreferences: [],
-                                  otherActivities: [],
-                                  travelTime: '',
-                                  travelMonth: [],
-                                  additionalInfo: `Show me information about ${resort}`
-                                },
-                                lastUpdated: new Date().toISOString(),
-                                currentStep: 12
-                              }
-                              localStorage.setItem('ski_questionnaire_data', JSON.stringify(storageData))
-                              
-                              // Navigate to results page
-                              router.push('/results')
-                            }}
+                            onClick={() => handleResortCardClick(resort)}
                             className="text-sm text-gray-700 hover:text-blue-600 transition-colors cursor-pointer hover:bg-blue-50 px-2 py-1 rounded-md"
                           >
                             {resort}
@@ -483,3 +481,5 @@ export default function Component() {
     </div>
   )
 }
+
+export default withClickTracking(Homepage, 'Homepage');

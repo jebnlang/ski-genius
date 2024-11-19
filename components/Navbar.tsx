@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Menu } from 'lucide-react'
+import { withClickTracking } from '@/components/withClickTracking';
+import { trackEnhancedEvent } from '@/utils/enhanced-analytics';
 
 const Navbar = () => {
   const [showDialog, setShowDialog] = useState(false)
@@ -46,6 +48,15 @@ const Navbar = () => {
     }
   }
 
+  const handleNavigation = (path: string, label: string) => {
+    trackEnhancedEvent('navigation', 'Navigation', {
+      label: label,
+      page_path: path,
+      element_type: 'nav_link'
+    });
+    router.push(path);
+  };
+
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
@@ -72,6 +83,8 @@ const Navbar = () => {
                 <Link
                   href="/questionnaire"
                   className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  onClick={() => handleNavigation('/questionnaire', 'Find Your Resort')}
+                  data-tracking-label="nav_questionnaire"
                 >
                   Find Your Resort
                 </Link>
@@ -183,4 +196,5 @@ const Navbar = () => {
   )
 }
 
-export default Navbar
+// Wrap the component with click tracking
+export default withClickTracking(Navbar, 'Navigation');

@@ -9,6 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowRight } from 'lucide-react'
 import { trackQuestionnaireCompletion, trackQuickResults } from '@/utils/analytics'
+import { withClickTracking } from '@/components/withClickTracking'
+import { trackEnhancedEvent, trackFormInteraction } from '@/utils/enhanced-analytics'
 
 interface Answers {
   groupType: string
@@ -286,7 +288,7 @@ const getQuickResults = (currentAnswers: Answers): Answers => {
   return quickAnswers
 }
 
-export default function Component() {
+function Questionnaire() {
   const pathname = usePathname()
   const router = useRouter()
   const [answers, updateAnswers] = useQuestionnaireState()
@@ -340,6 +342,11 @@ export default function Component() {
 
   // Simplify handleNext to use the new helper
   const handleNext = () => {
+    trackEnhancedEvent('questionnaire_progress', 'Questionnaire', {
+      label: `Step ${step}: Next`,
+      value: step
+    });
+    
     if (step < totalSteps) {
       // Skip questions 8 and 9 for beginners when coming from question 7
       if (step === 7 && isBeginnerOnly(answers.skiingLevels)) {
@@ -348,8 +355,10 @@ export default function Component() {
         navigateToStep(step + 1)
       }
     } else {
-      // Track questionnaire completion
-      trackQuestionnaireCompletion()
+      trackEnhancedEvent('questionnaire_complete', 'Questionnaire', {
+        label: 'Completion',
+        value: totalSteps
+      });
       
       // On the final step, ensure all answers are saved before redirecting
       const finalAnswers = {
@@ -882,3 +891,6 @@ export default function Component() {
     </div>
   )
 }
+
+// Wrap the component with click tracking
+export default withClickTracking(Questionnaire, 'Questionnaire');
