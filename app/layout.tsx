@@ -17,9 +17,9 @@ export const metadata = {
     description: 'Discover your perfect ski getaway with our AI-powered platform. Tailored recommendations, expert insights, and seamless booking make planning your ski holiday effortless—whether you\'re a first-timer or a seasoned skier. Explore, compare, and book all in one place!',
     images: [
       {
-        url: '/logo.png',
-        width: 1200,
-        height: 630,
+        url: '/android-chrome-512x512.png',
+        width: 512,
+        height: 512,
         alt: 'SkiGenius Logo',
       },
     ],
@@ -31,7 +31,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'SkiGenius',
     description: 'Discover your perfect ski getaway with our AI-powered platform. Tailored recommendations, expert insights, and seamless booking make planning your ski holiday effortless—whether you\'re a first-timer or a seasoned skier. Explore, compare, and book all in one place!',
-    images: ['/logo.png'],
+    images: ['/android-chrome-512x512.png'],
   },
 }
 
