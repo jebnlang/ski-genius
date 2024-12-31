@@ -233,8 +233,7 @@ const BookingCTA = ({ resort }: { resort: Resort }) => {
     weski: operators.weski_url,
     crystal_ski: operators.crystal_ski_url,
     iglu_ski: operators.iglu_ski_url,
-    // Temporarily remove skideal
-    // skideal: operators.ski_deal_url
+    skideal: operators.ski_deal_url
   })
     .filter(([_, url]) => url)
     .map(([key, url]) => ({

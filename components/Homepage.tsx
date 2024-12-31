@@ -381,14 +381,19 @@ function Homepage() {
                       </div>
 
                       {/* Price Information */}
-                      <div className="border-t border-gray-100 pt-4 space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Daily Pass:</span>
-                          <span className="font-semibold">€{resort.daily_pass_price}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">6-Day Pass:</span>
-                          <span className="font-semibold">€{resort.six_day_pass_price}</span>
+                      <div className="border-t border-gray-100 pt-4">
+                        <div className="flex items-center text-sm">
+                          <span className="text-gray-600">€</span>
+                          <div className="ml-1 space-y-2 flex-1">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Daily Pass:</span>
+                              <span className="font-semibold">{resort.daily_pass_price}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">6-Day Pass:</span>
+                              <span className="font-semibold">{resort.six_day_pass_price}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
